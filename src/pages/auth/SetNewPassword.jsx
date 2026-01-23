@@ -1,8 +1,9 @@
 // src/pages/auth/SetNewPassword.jsx
-import React, { useState } from "react";
-import { useNavigate  } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
+import { authApi } from "../../services/authApi";
 
 const SetNewPassword = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,18 @@ const SetNewPassword = () => {
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email || "";
+  const otp = location.state?.otp || "";
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    if (!email || !otp) {
+      navigate("/forgot-password", { replace: true });
+    }
+  }, [email, otp, navigate]);
 
   const handleChange = (e) => {
     setFormData({
@@ -21,12 +34,31 @@ const SetNewPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/successful");
-
+    setError("");
+    setSuccess("");
     if (formData.newPassword !== formData.confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
+    setIsLoading(true);
+    try {
+      await authApi.resetPassword({
+        email,
+        otp,
+        newPassword: formData.newPassword,
+      });
+      setSuccess("Password reset successfully. You can now log in.");
+      setTimeout(() => navigate("/login", { replace: true }), 800);
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not reset password. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -48,7 +80,16 @@ const SetNewPassword = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
             <div>
               <label
                 htmlFor="newPassword"
@@ -65,6 +106,7 @@ const SetNewPassword = () => {
                 onChange={handleChange}
                 className="w-full h-12 px-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-[#FFD1E8] focus:border-[#FFD1E8]"
                 required
+                disabled={isLoading}
               />
 
               <label
@@ -82,14 +124,16 @@ const SetNewPassword = () => {
                 onChange={handleChange}
                 className="w-full h-12 px-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-[#FFD1E8] focus:border-[#FFD1E8]"
                 required
+                disabled={isLoading}
               />
             </div>
 
             <button
               type="submit"
+              disabled={isLoading}
               className="w-full h-12 bg-[#C85344] hover:bg-[#C85344] text-white px-4 rounded-lg cursor-pointer font-medium transition-colors disabled:opacity-50"
             >
-              Set Password
+              {isLoading ? "Saving..." : "Set Password"}
             </button>
 
             <button

@@ -1,4 +1,3 @@
-// src/pages/auth/VerifyOtp.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authApi } from "../../services/authApi";
@@ -13,6 +12,7 @@ const VerifyCode = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email || "";
+  const mode = location.state?.mode || "verify-email"; // "password-reset" | "verify-email"
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
@@ -61,11 +61,16 @@ const VerifyCode = () => {
     }
     setIsVerifying(true);
     try {
-      await authApi.verifyEmail({ email, code });
-      navigate("/login", {
-        replace: true,
-        state: { emailVerified: true, email },
-      });
+      if (mode === "password-reset") {
+        await authApi.verifyPasswordOtp({ email, otp: code });
+        navigate("/set-new-password", { replace: true, state: { email, otp: code } });
+      } else {
+        await authApi.verifyEmail({ email, code });
+        navigate("/login", {
+          replace: true,
+          state: { emailVerified: true, email },
+        });
+      }
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -82,8 +87,13 @@ const VerifyCode = () => {
     setInfo("");
     setIsResending(true);
     try {
-      await authApi.resendVerification({ email });
-      setInfo("A new code has been sent to your email.");
+      if (mode === "password-reset") {
+        await authApi.resendPasswordOtp({ email });
+        setInfo("A new password reset code has been sent to your email.");
+      } else {
+        await authApi.resendVerification({ email });
+        setInfo("A new code has been sent to your email.");
+      }
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -105,10 +115,11 @@ const VerifyCode = () => {
               <img src="/logo.png" alt="Superfly Logo" className="w-24 h-24" />
             </div>
             <h2 className="text-2xl font-semibold text-gray-800 mb-2 text-center">
-              Verify Code
+              {mode === "password-reset" ? "Reset Password" : "Verify Code"}
             </h2>
             <p className="text-center text-gray-600">
-              Enter the verification code sent to {email || "your email"}.
+              Enter the {mode === "password-reset" ? "password reset" : "verification"} code sent to{" "}
+              {email || "your email"}.
             </p>
           </div>
 

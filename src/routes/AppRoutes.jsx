@@ -21,6 +21,8 @@ import Successful from "../pages/auth/Successful";
 import VerifyCode from "../pages/auth/VerifyCode";
 import ProtectedRoute from "./ProtectedRoute";
 import PublicRoute from "./PublicRoute";
+import CheckoutSuccess from "../pages/checkout/CheckoutSuccess";
+import CheckoutCancel from "../pages/checkout/CheckoutCancel";
 
 const router = createBrowserRouter([
   {
@@ -33,6 +35,8 @@ const router = createBrowserRouter([
         path: "/services/residential/complete-booking",
         element: <CompleteBooking />,
       },
+      { path: "/checkout/success", element: <CheckoutSuccess /> },
+      { path: "/checkout/cancel", element: <CheckoutCancel /> },
       {
         path: "/services/book-site-visit-commercial",
         element: <BookSiteVisitCommercial />,

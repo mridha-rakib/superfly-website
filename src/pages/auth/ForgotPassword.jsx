@@ -2,11 +2,14 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
+import { authApi } from "../../services/authApi";
 
 function ForgetPassword() {
   const [email, setEmail] = useState("");
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleBackToLogin = () => {
     navigate("/login");
@@ -14,10 +17,22 @@ function ForgetPassword() {
 
   const handleNext = async (e) => {
     e.preventDefault();
-    navigate("/verify-code", { state: { email } });
+    setError("");
+    setSuccess("");
     setIsLoading(true);
-   
-    setIsLoading(false);
+    try {
+      await authApi.requestPasswordReset({ email });
+      setSuccess("We sent a 4-digit code to your email.");
+      navigate("/verify-code", { state: { email, mode: "password-reset" } });
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not send reset code. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -40,6 +55,16 @@ function ForgetPassword() {
 
           {/* Form */}
           <form onSubmit={handleNext} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                {success}
+              </div>
+            )}
             <div>
               <label
                 htmlFor="email"

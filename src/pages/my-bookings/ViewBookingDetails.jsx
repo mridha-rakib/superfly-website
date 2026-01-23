@@ -14,14 +14,32 @@ function ViewBookingDetails() {
     );
   }
 
-  const getPaymentBadge = (status) => {
+  const deriveStatus = (quote) => {
+    const hasCleaner =
+      Boolean(quote.assignedCleanerId) ||
+      Boolean(quote.assignedCleanerIds && quote.assignedCleanerIds.length);
+    const cleaning = quote.cleaningStatus;
+    const report = quote.reportStatus;
+    const isCompleted = report === "approved" || quote.status === "completed";
+    if (isCompleted) return "completed";
+    if (report === "pending" && cleaning === "completed") return "report_submitted";
+    if (cleaning === "cleaning_in_progress") return "ongoing";
+    if (hasCleaner) return "assigned";
+    return "booked";
+  };
+
+  const statusBadge = (status) => {
     switch (status) {
-      case "paid":
-        return "bg-green-100 text-green-700 border-green-300";
-      case "pending":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      case "unpaid":
-        return "bg-red-100 text-red-700 border-red-300";
+      case "booked":
+        return "bg-blue-100 text-blue-700 border-blue-200";
+      case "assigned":
+        return "bg-indigo-100 text-indigo-700 border-indigo-200";
+      case "ongoing":
+        return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "report_submitted":
+        return "bg-purple-100 text-purple-700 border-purple-200";
+      case "completed":
+        return "bg-green-100 text-green-700 border-green-200";
       default:
         return "bg-gray-100 text-gray-700 border-gray-300";
     }
@@ -49,17 +67,24 @@ function ViewBookingDetails() {
 
             <div className="flex justify-between">
               <p className="font-medium text-gray-700">Status:</p>
-              <p className="text-gray-800 capitalize">{booking.status}</p>
+              {(() => {
+                const status = deriveStatus(booking);
+                return (
+                  <span
+                    className={`px-3 py-1 rounded-md text-sm border ${statusBadge(
+                      status
+                    )}`}
+                  >
+                    {status.replace(/_/g, " ").toUpperCase()}
+                  </span>
+                );
+              })()}
             </div>
 
             <div className="flex justify-between">
               <p className="font-medium text-gray-700">Payment Status:</p>
-              <span
-                className={`px-3 py-1 rounded-md text-sm border ${getPaymentBadge(
-                  booking.paymentStatus
-                )}`}
-              >
-                {booking.paymentStatus.toUpperCase()}
+              <span className="px-3 py-1 rounded-md text-sm border bg-green-100 text-green-700 border-green-300">
+                {(booking.paymentStatus || "paid").toUpperCase()}
               </span>
             </div>
           </div>

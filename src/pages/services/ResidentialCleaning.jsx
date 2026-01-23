@@ -1,21 +1,33 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../state/useAuthStore";
+import { useQuoteStore } from "../../state/useQuoteStore";
 import { cleaningServiceApi } from "../../services/cleaningServiceApi";
-import { quoteApi } from "../../services/quoteApi";
-import Hero from "../../components/home/Hero";
 
 function ResidentialCleaning() {
-  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore((state) => ({
     isAuthenticated: state.isAuthenticated,
     user: state.user,
+  }));
+  const {
+    createCheckoutIntent,
+    isCreating,
+    error: quoteError,
+    resetQuote,
+  } = useQuoteStore((state) => ({
+    createCheckoutIntent: state.createCheckoutIntent,
+    isCreating: state.isCreating,
+    error: state.error,
+    resetQuote: state.resetQuote,
   }));
 
   const [services, setServices] = useState([]);
   const [selectedItem, setSelectedItem] = useState("");
   const [details, setDetails] = useState({});
   const [isLoadingServices, setIsLoadingServices] = useState(false);
+  const [serviceDate, setServiceDate] = useState(
+    () => new Date().toISOString().slice(0, 10)
+  );
+  const [serviceTime, setServiceTime] = useState("09:00");
   const [contact, setContact] = useState({
     name: "",
     address: "",
@@ -48,10 +60,14 @@ function ResidentialCleaning() {
   }, []);
 
   const handleChange = (field, delta) => {
-    setDetails((prev) => ({
-      ...prev,
-      [field]: Math.max(0, (prev[field] || 0) + delta),
-    }));
+    setDetails((prev) => {
+      const nextValue = Math.max(0, (prev[field] || 0) + delta);
+      const next = { ...prev, [field]: nextValue };
+      if (nextValue <= 0) {
+        delete next[field];
+      }
+      return next;
+    });
   };
 
   const handleSelect = (e) => {
@@ -88,7 +104,9 @@ function ResidentialCleaning() {
   const serviceSelections = useMemo(() => {
     const payload = {};
     Object.entries(details).forEach(([code, qty]) => {
-      payload[code] = qty;
+      if (qty > 0) {
+        payload[code] = qty;
+      }
     });
     return payload;
   }, [details]);
@@ -96,18 +114,43 @@ function ResidentialCleaning() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!Object.keys(details).length) {
+    resetQuote();
+    if (!Object.keys(serviceSelections).length) {
       setError("Select at least one cleaning item.");
+      return;
+    }
+    if (!serviceDate) {
+      setError("Please choose a service date.");
+      return;
+    }
+    if (!serviceTime) {
+      setError("Please choose a service time.");
       return;
     }
     setIsSubmitting(true);
     try {
+      const fullName =
+        user?.fullName?.trim() ||
+        user?.name?.trim() ||
+        `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
+      const parsedFirst = fullName?.split(" ")[0] || "Customer";
+      const parsedLast =
+        fullName?.split(" ").slice(1).join(" ").trim() ||
+        user?.lastName ||
+        parsedFirst;
+
       const payload = {
         services: serviceSelections,
-        serviceDate: new Date().toISOString().slice(0, 10),
+        serviceDate,
+        preferredTime: serviceTime,
         paymentFlow: "checkout",
         ...(isAuthenticated
-          ? {}
+          ? {
+              firstName: parsedFirst,
+              lastName: parsedLast,
+              email: user?.email,
+              phoneNumber: user?.phoneNumber || user?.phone,
+            }
           : {
               firstName: contact.name?.split(" ")[0] || contact.name,
               lastName: contact.name?.split(" ").slice(1).join(" ") || "",
@@ -117,22 +160,14 @@ function ResidentialCleaning() {
         notes: specialRequest,
       };
 
-      const res = await quoteApi.createIntent(payload);
-      navigate("/services/residential/complete-booking", {
-        state: {
-          details,
-          totalPrice,
-          intent: res,
-          contact: isAuthenticated
-            ? {
-                name: user?.fullName,
-                email: user?.email,
-                phone: user?.phoneNumber || user?.phone,
-                address: user?.address,
-              }
-            : contact,
-        },
-      });
+      const res = await createCheckoutIntent(payload);
+
+      if (res?.flow === "checkout" && res?.checkoutUrl) {
+        window.location.assign(res.checkoutUrl);
+        return;
+      }
+
+      setError("Unexpected payment flow. Please try again.");
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -161,6 +196,7 @@ function ResidentialCleaning() {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
               {error}
+              {quoteError ? ` (${quoteError})` : ""}
             </div>
           )}
 
@@ -260,6 +296,36 @@ function ResidentialCleaning() {
             </div>
           )}
 
+          {/* Service Date */}
+          <div className="flex flex-col">
+            <label htmlFor="service-date" className="mb-1 font-medium text-gray-700">
+              Preferred Service Date
+            </label>
+            <input
+              type="date"
+              id="service-date"
+              value={serviceDate}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setServiceDate(e.target.value)}
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              required
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label htmlFor="service-time" className="mb-1 font-medium text-gray-700">
+              Preferred Service Time
+            </label>
+            <input
+              type="time"
+              id="service-time"
+              value={serviceTime}
+              onChange={(e) => setServiceTime(e.target.value)}
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              required
+            />
+          </div>
+
           {/* Cleaning Options */}
           <div className="flex flex-col">
             <label
@@ -355,10 +421,10 @@ function ResidentialCleaning() {
 
           <button
             type="submit"
-            disabled={isSubmitting || isLoadingServices}
+            disabled={isSubmitting || isCreating || isLoadingServices}
             className="w-full bg-[#C85344] text-white p-4 rounded-lg hover:bg-[#b84335] transition font-medium text-lg mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Submitting..." : "Get a Quote"}
+            {isSubmitting || isCreating ? "Redirecting to checkout..." : "Get a Quote"}
           </button>
         </form>
       </div>

@@ -1,70 +1,51 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-const bookingsData = [
-  {
-    id: 1,
-    bookingId: "BKG-1001",
-    type: "Residential",
-    address: "123 Maple Street, NY",
-    date: "2025-12-10",
-    time: "10:00 AM",
-    items: [
-      { name: "Bedroom Cleaning", qty: 2, price: 30 },
-      { name: "Bathroom Cleaning", qty: 1, price: 20 },
-    ],
-    price: 80,
-    status: "upcoming",
-  },
-  {
-    id: 2,
-    bookingId: "BKG-1002",
-    type: "Commercial",
-    address: "Office Tower, Floor 3",
-    date: "2025-12-08",
-    time: "2:00 PM",
-    items: [{ name: "Office Cleaning", qty: 1, price: 150 }],
-    price: 150,
-    status: "in progress",
-  },
-  {
-    id: 3,
-    bookingId: "BKG-1003",
-    type: "Post-Construction",
-    address: "45 Sunset Road",
-    date: "2025-11-25",
-    time: "11:30 AM",
-    items: [
-      { name: "Deep Cleaning", qty: 1, price: 200 },
-      { name: "Debris Removal", qty: 1, price: 80 },
-    ],
-    price: 280,
-    status: "completed",
-  },
-];
 
 function MyBookings() {
   const [activeTab, setActiveTab] = useState("all");
-  const [modalBooking, setModalBooking] = useState(null); // booking for review
+  const [bookings, setBookings] = useState([]);
+  const [modalBooking, setModalBooking] = useState(null);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [isLoading] = useState(false);
+  const [error] = useState("");
 
   const navigate = useNavigate();
 
   const tabs = [
     { id: "all", label: "All Bookings" },
-    { id: "upcoming", label: "Upcoming" },
-    { id: "in progress", label: "Ongoing" },
+    { id: "booked", label: "Booked" },
+    { id: "assigned", label: "Assigned" },
+    { id: "ongoing", label: "Ongoing" },
+    { id: "report_submitted", label: "Report Submitted" },
     { id: "completed", label: "Completed" },
   ];
+
+  const deriveStatus = (quote) => {
+    if (quote.clientStatus) return quote.clientStatus;
+    const hasCleaner =
+      Boolean(quote.assignedCleanerId) ||
+      Boolean(quote.assignedCleanerIds && quote.assignedCleanerIds.length);
+    const cleaning = quote.cleaningStatus;
+    const report = quote.reportStatus;
+    const isCompleted = report === "approved" || quote.status === "completed";
+    if (isCompleted) return "completed";
+    if (report === "pending" && cleaning === "completed") return "report_submitted";
+    if (cleaning === "cleaning_in_progress") return "ongoing";
+    if (hasCleaner) return "assigned";
+    return "booked";
+  };
+
+  // TODO: replace mock data with real API when available
 
   const filteredBookings =
     activeTab === "all"
       ? bookingsData
-      : bookingsData.filter((b) => b.status === activeTab);
+      : bookingsData.filter((b) => deriveStatus(b) === activeTab);
 
   const renderButtons = (booking) => {
-    if (booking.status === "completed") {
+    const status = deriveStatus(booking);
+    if (status === "completed") {
       return (
         <button
           onClick={() => openReviewModal(booking)}
@@ -87,10 +68,14 @@ function MyBookings() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "upcoming":
+      case "booked":
         return "bg-blue-500";
-      case "in progress":
+      case "assigned":
+        return "bg-indigo-500";
+      case "ongoing":
         return "bg-yellow-500";
+      case "report_submitted":
+        return "bg-purple-500";
       case "completed":
         return "bg-green-500";
       default:
@@ -153,13 +138,18 @@ function MyBookings() {
             <div className="flex flex-col gap-1">
               <span className="font-semibold text-lg">{booking.type} Cleaning</span>
 
-              <span
-                className={`px-2 py-1 rounded-2xl  text-white text-sm w-max ${getStatusColor(
-                  booking.status
-                )}`}
-              >
-                {booking.status.toUpperCase()}
-              </span>
+              {(() => {
+                const status = deriveStatus(booking);
+                return (
+                  <span
+                    className={`px-2 py-1 rounded-2xl  text-white text-sm w-max ${getStatusColor(
+                      status
+                    )}`}
+                  >
+                    {status.replace(/_/g, " ").toUpperCase()}
+                  </span>
+                );
+              })()}
 
               <span className="text-gray-700 font-medium">
                 Booking ID: {booking.bookingId}

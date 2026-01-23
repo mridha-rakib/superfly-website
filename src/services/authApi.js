@@ -40,7 +40,17 @@ export const authApi = {
   },
 
   requestPasswordReset: async (payload) => {
-    const response = await httpClient.post("/auth/request-reset-password", payload);
+    const response = await httpClient.post("/auth/forgot-password", payload);
+    return unwrap(response);
+  },
+
+  verifyPasswordOtp: async (payload) => {
+    const response = await httpClient.post("/auth/verify-password-otp", payload);
+    return unwrap(response);
+  },
+
+  resendPasswordOtp: async (payload) => {
+    const response = await httpClient.post("/auth/resend-password-otp", payload);
     return unwrap(response);
   },
 
