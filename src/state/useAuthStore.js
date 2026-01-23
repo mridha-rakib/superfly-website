@@ -1,0 +1,141 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { configureHttpClient } from "../lib/httpClient";
+import { authApi } from "../services/authApi";
+
+const parseError = (error) =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.message ||
+  "Something went wrong. Please try again.";
+
+const initialState = {
+  user: null,
+  role: null,
+  accessToken: null,
+  isAuthenticated: false,
+  isLoading: false,
+  isHydrating: false,
+  error: null,
+};
+
+export const useAuthStore = create(
+  persist(
+    (set, get) => ({
+      ...initialState,
+
+      login: async (payload) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authApi.login(payload);
+          const user = response?.data?.user || response?.user || null;
+          const accessToken =
+            response?.data?.accessToken || response?.accessToken || null;
+
+          if (!user || !accessToken) {
+            throw new Error("Login failed: missing token or user.");
+          }
+
+          set({
+            user,
+            role: user?.role || null,
+            accessToken,
+            isAuthenticated: Boolean(user && accessToken),
+            isLoading: false,
+          });
+          return user;
+        } catch (error) {
+          set({ isLoading: false, error: parseError(error) });
+          throw error;
+        }
+      },
+
+      logout: async () => {
+        try {
+          await authApi.logout();
+        } catch (error) {
+          // ignore API errors on logout
+        }
+        set({ ...initialState });
+      },
+
+      forceLogout: () => set({ ...initialState }),
+
+      refreshAccessToken: async () => {
+        const response = await authApi.refreshAccessToken();
+        const accessToken =
+          response?.data?.accessToken || response?.accessToken || null;
+        if (accessToken) {
+          set({
+            accessToken,
+            isAuthenticated: Boolean(get().user || accessToken),
+          });
+        }
+        return accessToken;
+      },
+
+      fetchProfile: async () => {
+        const profile = await authApi.getProfile();
+        const user = profile?.data || profile || null;
+        set({
+          user,
+          role: user?.role || null,
+          isAuthenticated: Boolean(user),
+        });
+        return user;
+      },
+
+      bootstrap: async () => {
+        const { accessToken, user, isHydrating } = get();
+        if (isHydrating) return;
+        if (!accessToken) {
+          set({ ...initialState });
+          return;
+        }
+        set({ isHydrating: true });
+        try {
+          if (!user) {
+            await get().fetchProfile();
+          } else {
+            set({
+              isAuthenticated: true,
+              role: user?.role || null,
+            });
+          }
+        } catch (error) {
+          set({ ...initialState });
+        } finally {
+          set({ isHydrating: false });
+        }
+      },
+
+      setUser: (user) =>
+        set({
+          user,
+          role: user?.role || null,
+          isAuthenticated: Boolean(user),
+        }),
+
+      clearError: () => set({ error: null }),
+    }),
+    {
+      name: "superfly-auth",
+      partialize: (state) => ({
+        user: state.user,
+        role: state.role,
+        accessToken: state.accessToken,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        const isAuthed = Boolean(state.accessToken || state.user);
+        state.isAuthenticated = isAuthed;
+      },
+    }
+  )
+);
+
+configureHttpClient({
+  getAccessTokenFn: () => useAuthStore.getState().accessToken,
+  refreshAccessTokenFn: () => useAuthStore.getState().refreshAccessToken(),
+  onLogout: () => useAuthStore.getState().forceLogout(),
+});
