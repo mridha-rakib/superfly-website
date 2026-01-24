@@ -27,4 +27,14 @@ export const quoteApi = {
     });
     return unwrap(response);
   },
+
+  listClient: async (params) => {
+    const response = await httpClient.get("/quotes/client", { params });
+    return unwrap(response);
+  },
+
+  markArrived: async (quoteId) => {
+    const response = await httpClient.patch(`/quotes/${quoteId}/arrived`);
+    return unwrap(response);
+  },
 };

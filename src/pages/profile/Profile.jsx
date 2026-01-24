@@ -1,147 +1,209 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { userApi } from "../../services/userApi";
+import { useAuthStore } from "../../state/useAuthStore";
 
 function Profile() {
-  const [user, setUser] = useState({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "123-456-7890",
-    address: "123 Main St, City, Country",
-    avatar: "/avatar.png",
-  });
-
+  const authUser = useAuthStore((s) => s.user);
+  const setUserInStore = useAuthStore((s) => s.setUser);
+  const [user, setUser] = useState(null);
+  const [tempUser, setTempUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [tempUser, setTempUser] = useState({ ...user });
-  const [avatarPreview, setAvatarPreview] = useState(user.avatar);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    setIsLoading(true);
+    userApi
+      .getProfile()
+      .then((res) => {
+        const profile = res?.data || res;
+        setUser(profile);
+        setTempUser(profile);
+        setUserInStore(profile);
+      })
+      .catch((err) =>
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Could not load profile. Please try again."
+        )
+      )
+      .finally(() => setIsLoading(false));
+  }, [setUserInStore]);
 
   const handleChange = (field, value) => {
     setTempUser((prev) => ({ ...prev, [field]: value }));
+    setError("");
+    setSuccess("");
   };
 
-  const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => setAvatarPreview(reader.result);
-      reader.readAsDataURL(file);
-      setTempUser((prev) => ({ ...prev, avatar: file }));
+  const handleSave = async () => {
+    if (!tempUser) return;
+    setIsSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const payload = {
+        fullName: tempUser.fullName || tempUser.name,
+        phoneNumber: tempUser.phoneNumber || tempUser.phone,
+        address: tempUser.address,
+      };
+      const res = await userApi.updateProfile(payload);
+      const updated = res?.data || res;
+      setUser(updated);
+      setTempUser(updated);
+      setUserInStore(updated);
+      setIsEditing(false);
+      setSuccess("Profile updated successfully.");
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not update profile. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleSave = () => {
-    setUser({ ...tempUser, avatar: avatarPreview });
+  const handleCancel = () => {
+    setTempUser(user);
     setIsEditing(false);
+    setError("");
+    setSuccess("");
   };
 
-  const handleCancel = () => {
-    setTempUser({ ...user });
-    setAvatarPreview(user.avatar);
-    setIsEditing(false);
-  };
+  if (isLoading) {
+    return (
+      <div className="max-w-3xl mx-auto py-16 px-5 text-center text-gray-600">
+        Loading profile...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-3xl mx-auto py-16 px-5 text-center text-red-500">
+        {error || "Profile not found."}
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-2xl mx-auto py-10 px-5">
-      {/* Avatar + Name */}
-      <div className="flex flex-col items-center mb-10">
-        <div className="relative">
-          <img
-            src={avatarPreview}
-            alt="Avatar"
-            className="w-24 h-24 rounded-full mb-4 object-cover border border-gray-300"
-          />
-          {isEditing && (
-            <label className="absolute bottom-0 right-0 bg-[#C85344] text-white p-1 rounded-full cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
-              ✎
-            </label>
+    <div className="max-w-3xl mx-auto py-10 px-5 space-y-6">
+      <div className="bg-gradient-to-r from-[#fde7e1] to-white border border-[#f6d5ce] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {user?.avatar ? (
+            <img
+              src={user.avatar}
+              alt="avatar"
+              className="w-16 h-16 rounded-full object-cover border border-white shadow-md"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-[#C85344] text-white flex items-center justify-center text-xl font-semibold border border-white shadow-md">
+              {(user?.fullName || user?.name || "U").charAt(0).toUpperCase()}
+            </div>
           )}
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-[#C85344]">Account</p>
+            <h1 className="text-3xl font-bold text-gray-900 mt-1">Profile</h1>
+            <p className="text-gray-600">{user.role ? user.role.toUpperCase() : "User"}</p>
+          </div>
         </div>
-
-        <h1 className="text-2xl font-bold mb-4">{isEditing ? tempUser.name : user.name}</h1>
-
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="bg-[#C85344] text-white px-5 py-2 rounded hover:bg-[#b84335] transition"
+            className="px-4 py-2 bg-[#C85344] text-white rounded-lg text-sm hover:bg-[#b84335] transition"
           >
             Edit Profile
           </button>
         )}
       </div>
 
-      {/* User Details */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex flex-col">
-          <label className="mb-1 font-medium">Name</label>
-          <input
-            type="text"
-            value={isEditing ? tempUser.name : user.name}
-            disabled={!isEditing}
-            onChange={(e) => handleChange("name", e.target.value)}
-            className={`p-2 border rounded ${
-              isEditing ? "border-gray-300" : "border-transparent bg-gray-100"
-            }`}
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="mb-1 font-medium">Email</label>
-          <input
-            type="email"
-            value={user.email}
-            disabled
-            className="p-2 border border-gray-300 rounded bg-gray-100 cursor-not-allowed"
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="mb-1 font-medium">Phone</label>
-          <input
-            type="tel"
-            value={isEditing ? tempUser.phone : user.phone}
-            disabled={!isEditing}
-            onChange={(e) => handleChange("phone", e.target.value)}
-            className={`p-2 border rounded ${
-              isEditing ? "border-gray-300" : "border-transparent bg-gray-100"
-            }`}
-          />
-        </div>
-
-        <div className="flex flex-col">
-          <label className="mb-1 font-medium">Address</label>
-          <input
-            type="text"
-            value={isEditing ? tempUser.address : user.address}
-            disabled={!isEditing}
-            onChange={(e) => handleChange("address", e.target.value)}
-            className={`p-2 border rounded ${
-              isEditing ? "border-gray-300" : "border-transparent bg-gray-100"
-            }`}
-          />
-        </div>
-      </div>
-
-      {/* Save / Cancel Buttons at the Bottom */}
-      {isEditing && (
-        <div className="flex justify-center gap-4 mt-8">
-          <button
-            onClick={handleSave}
-            className="bg-[#C85344] text-white px-5 py-2 rounded hover:bg-[#b84335] transition"
-          >
-            Save
-          </button>
-          <button
-            onClick={handleCancel}
-            className="bg-gray-300 text-gray-700 px-5 py-2 rounded hover:bg-gray-400 transition"
-          >
-            Cancel
-          </button>
+      {(error || success) && (
+        <div
+          className={`px-4 py-3 rounded-lg text-sm ${
+            error
+              ? "bg-red-50 border border-red-200 text-red-700"
+              : "bg-green-50 border border-green-200 text-green-700"
+          }`}
+        >
+          {error || success}
         </div>
       )}
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input
+              type="text"
+              value={tempUser?.fullName || tempUser?.name || ""}
+              disabled={!isEditing}
+              onChange={(e) => handleChange("fullName", e.target.value)}
+              className={`p-3 rounded-lg border ${
+                isEditing ? "border-gray-300" : "border-transparent bg-gray-50"
+              } focus:outline-none focus:ring-2 focus:ring-[#C85344]/30`}
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">Email (read-only)</label>
+            <input
+              type="email"
+              value={tempUser?.email || ""}
+              disabled
+              className="p-3 rounded-lg border border-transparent bg-gray-100 text-gray-600 cursor-not-allowed"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <input
+              type="tel"
+              value={tempUser?.phoneNumber || tempUser?.phone || ""}
+              disabled={!isEditing}
+              onChange={(e) => handleChange("phoneNumber", e.target.value)}
+              className={`p-3 rounded-lg border ${
+                isEditing ? "border-gray-300" : "border-transparent bg-gray-50"
+              } focus:outline-none focus:ring-2 focus:ring-[#C85344]/30`}
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">Address</label>
+            <input
+              type="text"
+              value={tempUser?.address || ""}
+              disabled={!isEditing}
+              onChange={(e) => handleChange("address", e.target.value)}
+              className={`p-3 rounded-lg border ${
+                isEditing ? "border-gray-300" : "border-transparent bg-gray-50"
+              } focus:outline-none focus:ring-2 focus:ring-[#C85344]/30`}
+            />
+          </div>
+        </div>
+
+        {isEditing && (
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-4 py-2 bg-[#C85344] text-white rounded-lg hover:bg-[#b84335] transition disabled:opacity-60"
+            >
+              {isSaving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

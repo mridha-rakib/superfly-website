@@ -18,7 +18,7 @@ export const cleaningReportApi = {
     });
 
     const response = await httpClient.post(
-      `/cleaning-reports/quotes/${quoteId}`,
+      `/reports/quotes/${quoteId}`,
       formData,
       {
         headers: { "Content-Type": "multipart/form-data" },

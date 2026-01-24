@@ -135,17 +135,38 @@ function CheckoutSuccess() {
                 Selected Services
               </div>
               <ul className="space-y-2 text-sm text-gray-700">
-                {lastQuote.services.map((item) => (
+                {lastQuote.services.map((item) => {
+                  const unit = typeof item.unitPrice === "number" ? `$${item.unitPrice.toFixed(2)}` : null;
+                  const subtotal =
+                    typeof item.subtotal === "number"
+                      ? `$${item.subtotal.toFixed(2)}`
+                      : unit && item.quantity
+                        ? `$${(item.quantity * item.unitPrice).toFixed(2)}`
+                        : null;
+                  return (
                   <li
                     key={item.code || item.label}
-                    className="flex justify-between rounded-lg bg-gray-50 px-3 py-2"
+                    className="flex justify-between items-center rounded-lg bg-gray-50 px-3 py-2"
                   >
-                    <span className="font-medium text-gray-800">
-                      {(item.label || item.code || "Service").trim()}
-                    </span>
-                    <span className="text-gray-600">x {item.quantity ?? "--"}</span>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-gray-900">
+                        {(item.label || item.code || "Service").trim()}
+                      </span>
+                      <span className="text-gray-600 text-xs">
+                        {unit ? `${unit} each` : "Price N/A"}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-gray-700 font-medium">
+                        x {item.quantity ?? "--"}
+                      </div>
+                      {subtotal && (
+                        <div className="text-xs text-gray-500">Subtotal {subtotal}</div>
+                      )}
+                    </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </div>
           ) : null}

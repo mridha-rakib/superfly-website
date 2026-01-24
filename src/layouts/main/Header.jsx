@@ -313,6 +313,7 @@ function UserProfileDropdown({ user, onLogout }) {
   const [open, setOpen] = useState(false);
   const displayName = user?.fullName || user?.name || "User";
   const displayRole = user?.role || "client";
+  const initial = (displayName || "U").trim().charAt(0).toUpperCase();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -331,11 +332,17 @@ function UserProfileDropdown({ user, onLogout }) {
         onClick={() => setOpen(!open)}
         className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 transition-colors"
       >
-        <img
-          src={user?.avatar || "/default-avatar.png"}
-          alt="avatar"
-          className="h-8 w-8 rounded-full object-cover border border-gray-300"
-        />
+        {user?.avatar ? (
+          <img
+            src={user.avatar}
+            alt="avatar"
+            className="h-8 w-8 rounded-full object-cover border border-gray-300"
+          />
+        ) : (
+          <div className="h-8 w-8 rounded-full bg-[#C85344] text-white flex items-center justify-center text-sm font-semibold border border-[#e5b3aa]">
+            {initial}
+          </div>
+        )}
         <div className="text-left hidden lg:block">
           <p className="text-sm font-medium text-gray-900">{displayName}</p>
           <p className="text-xs text-gray-500 capitalize">{displayRole}</p>
@@ -345,15 +352,13 @@ function UserProfileDropdown({ user, onLogout }) {
 
       {open && (
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
-          <button
-            onClick={() =>
-              window.location.href =
-                displayRole === "cleaner" ? "/profile" : "/my-booking"
-            }
+          <Link
+            to="/profile"
+            onClick={() => setOpen(false)}
             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
           >
             My Profile
-          </button>
+          </Link>
           <button
             onClick={onLogout}
             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
@@ -159,13 +159,15 @@ function MyJobs() {
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusStyles(
                       computed.key
                     )}`}
+                    title={computed.label}
                   >
                     {computed.label}
                   </span>
                 </div>
 
                 <div className="text-sm text-gray-700">
-                  <span className="font-medium">Booking ID:</span> {job._id}
+                  <span className="font-medium">Booking ID:</span>{" "}
+                  <span className="font-mono tracking-tight">{job._id}</span>
                 </div>
 
                 <div className="text-sm text-gray-700 flex items-center gap-2">

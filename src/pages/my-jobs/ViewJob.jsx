@@ -20,7 +20,7 @@ const statusChip = (key) => {
 };
 
 const Section = ({ title, children }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+  <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6 space-y-4">
     <div className="flex items-center gap-2">
       <div className="w-1 h-6 bg-[#C85344] rounded-full" />
       <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
@@ -32,7 +32,7 @@ const Section = ({ title, children }) => (
 const InfoRow = ({ label, value }) => (
   <div className="flex justify-between text-sm text-gray-700">
     <span className="font-medium text-gray-600">{label}</span>
-    <span className="text-gray-900">{value || "—"}</span>
+    <span className="text-gray-900">{value || "--"}</span>
   </div>
 );
 
@@ -52,6 +52,11 @@ function ViewJob() {
   const [notes, setNotes] = useState("");
   const [beforePhotos, setBeforePhotos] = useState([]);
   const [afterPhotos, setAfterPhotos] = useState([]);
+  const [arrivalSuccess, setArrivalSuccess] = useState("");
+  const [showProgressCard, setShowProgressCard] = useState(false);
+  const [showCompletedCard, setShowCompletedCard] = useState(false);
+  const [displayStatus, setDisplayStatus] = useState(null);
+  const [hasArrived, setHasArrived] = useState(false);
 
   const deriveStatus = (job) => {
     if (job.cleanerStatus) return job.cleanerStatus;
@@ -88,6 +93,7 @@ function ViewJob() {
           setError("Job not found.");
         } else {
           setJob(found);
+          setDisplayStatus(deriveStatus(found));
         }
       })
       .catch((err) =>
@@ -136,6 +142,28 @@ function ViewJob() {
     return date.toISOString();
   };
 
+  const handleMarkArrived = async () => {
+    setSubmitError("");
+    setArrivalSuccess("");
+    setIsSubmitting(true);
+    try {
+      await quoteApi.markArrived(job._id);
+      setArrivalSuccess("Arrival confirmed. Status updated to On Site.");
+      setStatusOption("cleaning_in_progress");
+      setShowProgressCard(true);
+      setDisplayStatus({ key: "cleaning_in_progress", label: "Cleaning in Progress" });
+      setHasArrived(true);
+    } catch (err) {
+      setSubmitError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not mark arrival. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmitReport = async () => {
     setSubmitError("");
     setSubmitSuccess("");
@@ -155,6 +183,8 @@ function ViewJob() {
         statusOption,
       });
       setSubmitSuccess("Report submitted successfully.");
+      setShowCompletedCard(true);
+      setDisplayStatus({ key: "completed", label: "Cleaning completed" });
     } catch (err) {
       setSubmitError(
         err?.response?.data?.message ||
@@ -167,7 +197,7 @@ function ViewJob() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-5 space-y-6">
+    <div className="max-w-5xl mx-auto py-10 px-5 space-y-6 bg-gradient-to-b from-[#f9fbfd] to-white rounded-3xl">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-[#C85344]/80">Job</p>
@@ -190,8 +220,12 @@ function ViewJob() {
 
       <Section title="Job Information">
         <div className="flex flex-wrap gap-3 items-center">
-          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusChip(computed.key)}`}>
-            {computed.label}
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold ${statusChip(
+              (displayStatus || computed).key
+            )}`}
+          >
+            {(displayStatus || computed).label}
           </span>
           <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
             {(job.paymentStatus || "paid").toUpperCase()}
@@ -202,6 +236,7 @@ function ViewJob() {
           <InfoRow label="Service Type" value={job.serviceType} />
           <InfoRow label="Date" value={job.serviceDate} />
           <InfoRow label="Time" value={job.preferredTime || "N/A"} />
+          <InfoRow label="Current Status" value={(displayStatus || computed).label} />
         </div>
       </Section>
 
@@ -252,34 +287,54 @@ function ViewJob() {
       <Section title="Payment Summary">
         <div className="flex justify-between text-lg font-semibold text-gray-900">
           <span>{amountTitle}</span>
-          <span>{amountLabel ? `$${amountLabel}` : "—"}</span>
+          <span>{amountLabel ? `$${amountLabel}` : "--"}</span>
         </div>
       </Section>
 
       <Section title="Update Job Status">
         <div className="space-y-3">
-          {[
-            { id: "pending", label: "Mark as Assigned/Pending" },
-            { id: "cleaning_in_progress", label: "Cleaning in Progress" },
-            { id: "completed", label: "Cleaning completed" },
-          ].map((opt) => (
-            <label
-              key={opt.id}
-              className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer ${
-                statusOption === opt.id ? "border-[#C85344] bg-[#C85344]/5" : "border-gray-200"
-              }`}
+          <div className="flex items-center justify-between rounded-xl border-2 border-dashed border-[#C85344]/40 p-4 bg-[#C85344]/5">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#C85344]" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Mark as Arrived</p>
+                <p className="text-xs text-gray-600">Tap when you reach the client location.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleMarkArrived}
+              disabled={isSubmitting || hasArrived}
+              className="px-4 py-2 bg-[#C85344] text-white rounded-lg text-sm hover:bg-[#b84335] transition disabled:opacity-60"
             >
-              <input
-                type="radio"
-                name="statusOption"
-                value={opt.id}
-                checked={statusOption === opt.id}
-                onChange={(e) => setStatusOption(e.target.value)}
-              />
-              <span className="text-sm text-gray-800">{opt.label}</span>
-            </label>
-          ))}
+              {isSubmitting ? "Updating..." : hasArrived ? "Arrived" : "Mark as Arrived"}
+            </button>
+          </div>
+
+          {showProgressCard && (
+            <div className="flex items-center gap-3 rounded-lg border p-3 bg-blue-50">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Cleaning in Progress</p>
+                <p className="text-xs text-gray-600">On-site work started.</p>
+              </div>
+            </div>
+          )}
+
+          {showCompletedCard && (
+            <div className="flex items-center gap-3 rounded-lg border p-3 bg-emerald-50">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div>
+                <p className="text-sm font-semibold text-gray-800">Cleaning completed</p>
+                <p className="text-xs text-gray-600">Report submitted. Waiting for admin approval.</p>
+              </div>
+            </div>
+          )}
         </div>
+        {arrivalSuccess && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mt-3">
+            {arrivalSuccess}
+          </div>
+        )}
       </Section>
 
       <Section title="Upload Photos">

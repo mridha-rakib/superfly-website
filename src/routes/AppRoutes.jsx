@@ -24,7 +24,19 @@ import PublicRoute from "./PublicRoute";
 import CheckoutSuccess from "../pages/checkout/CheckoutSuccess";
 import CheckoutCancel from "../pages/checkout/CheckoutCancel";
 
-const router = createBrowserRouter([
+const inferBase = () => {
+  const envBase = (import.meta.env.VITE_APP_BASENAME || "").trim();
+  if (envBase) return envBase;
+  if (typeof window !== "undefined") {
+    return window.location.pathname.startsWith("/Superfly") ? "/Superfly" : "";
+  }
+  return "";
+};
+
+const BASENAME = inferBase() || undefined;
+
+const router = createBrowserRouter(
+  [
   {
     path: "/",
     element: <MainLayout />,
@@ -117,6 +129,8 @@ const router = createBrowserRouter([
   { path: "/set-new-password", element: <SetNewPassword /> },
   { path: "/successful", element: <Successful /> },
   { path: "/verify-code", element: <VerifyCode /> },
-]);
+],
+  { basename: BASENAME }
+);
 
 export default router;
