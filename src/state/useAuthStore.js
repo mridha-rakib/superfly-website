@@ -9,6 +9,18 @@ const parseError = (error) =>
   error?.message ||
   "Something went wrong. Please try again.";
 
+const normalizeUser = (u) => {
+  if (!u) return null;
+  const avatar =
+    u.profileImage ||
+    u.profileImageUrl ||
+    u.avatar ||
+    u.photoUrl ||
+    u.photo ||
+    null;
+  return { ...u, avatar };
+};
+
 const initialState = {
   user: null,
   role: null,
@@ -28,7 +40,7 @@ export const useAuthStore = create(
         set({ isLoading: true, error: null });
         try {
           const response = await authApi.login(payload);
-          const user = response?.data?.user || response?.user || null;
+          const user = normalizeUser(response?.data?.user || response?.user);
           const accessToken =
             response?.data?.accessToken || response?.accessToken || null;
 
@@ -76,7 +88,7 @@ export const useAuthStore = create(
 
       fetchProfile: async () => {
         const profile = await authApi.getProfile();
-        const user = profile?.data || profile || null;
+        const user = normalizeUser(profile?.data || profile || null);
         set({
           user,
           role: user?.role || null,
@@ -111,7 +123,7 @@ export const useAuthStore = create(
 
       setUser: (user) =>
         set({
-          user,
+          user: normalizeUser(user),
           role: user?.role || null,
           isAuthenticated: Boolean(user),
         }),

@@ -1,6 +1,10 @@
 import React, { useState } from "react";
+import { quoteApi } from "../../services/quoteApi";
+import { useAuthStore } from "../../state/useAuthStore";
+import { toast } from "react-toastify";
 
 function BookSiteVisitCommercial() {
+  const { user } = useAuthStore();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -12,26 +16,48 @@ function BookSiteVisitCommercial() {
     preferredTime: "",
     specialRequest: ""
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log("Form submitted:", formData);
-    
-    // Show success modal
-    setShowSuccessModal(true);
-    
-    // Reset form
-    setFormData({
-      name: "",
-      company: "",
-      email: "",
-      phone: "",
-      address: "",
-      preferredDate: "",
-      preferredTime: "",
-      specialRequest: ""
-    });
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setError("");
+    quoteApi
+      .createCommercialRequest({
+        serviceType: "commercial",
+        name: formData.name,
+        companyName: formData.company,
+        email: formData.email,
+        phoneNumber: formData.phone,
+        businessAddress: formData.address,
+        preferredDate: formData.preferredDate,
+        preferredTime: formData.preferredTime,
+        specialRequest: formData.specialRequest,
+      })
+      .then(() => {
+        setShowSuccessModal(true);
+        setFormData({
+          name: "",
+          company: "",
+          email: "",
+          phone: "",
+          address: "",
+          preferredDate: "",
+          preferredTime: "",
+          specialRequest: ""
+        });
+      })
+      .catch((err) => {
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Could not submit request. Please try again.";
+        setError(msg);
+        toast.error(msg);
+      })
+      .finally(() => setIsSubmitting(false));
   };
 
   const handleInputChange = (e) => {
@@ -59,6 +85,11 @@ function BookSiteVisitCommercial() {
         className="bg-white shadow-md rounded-lg p-6 md:p-8 space-y-6 border border-gray-200"
         onSubmit={handleSubmit}
       >
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
         {/* Row 1: Name & Company Name */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
@@ -187,9 +218,10 @@ function BookSiteVisitCommercial() {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full bg-[#C85344] text-white p-4 rounded-lg hover:bg-[#b84335] transition font-medium text-lg"
+          disabled={isSubmitting}
+          className="w-full bg-[#C85344] text-white p-4 rounded-lg hover:bg-[#b84335] transition font-medium text-lg disabled:opacity-60"
         >
-          Book a visit
+          {isSubmitting ? "Submitting..." : "Book a visit"}
         </button>
       </form>
 

@@ -37,4 +37,14 @@ export const quoteApi = {
     const response = await httpClient.patch(`/quotes/${quoteId}/arrived`);
     return unwrap(response);
   },
+
+  createCommercialRequest: async (payload) => {
+    const response = await httpClient.post("/quotes/commercial", payload);
+    return unwrap(response);
+  },
+
+  createPostConstructionRequest: async (payload) => {
+    const response = await httpClient.post("/quotes/post-construction", payload);
+    return unwrap(response);
+  },
 };

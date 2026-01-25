@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     allowedHosts: [
-      'clinton-bottle-yacht-don.trycloudflare.com'
+      'became-considered-acc-elvis.trycloudflare.com'
     ]
   }
 });

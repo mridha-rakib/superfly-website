@@ -23,20 +23,37 @@ function MyJobs() {
   ];
 
   const deriveStatus = (job) => {
-    if (job.cleanerStatus) return job.cleanerStatus;
-    const hasCleaner = Boolean(job.assignedCleanerId || (job.assignedCleanerIds || []).length);
-    const cleaning = job.cleaningStatus;
-    const report = job.reportStatus;
-    const status = job.status;
+    const normalizeKey = (val) => (val || "").toLowerCase();
+    const labelMap = {
+      pending: "Pending",
+      assigned: "Pending",
+      cleaning_in_progress: "Ongoing",
+      "waiting-for-admin-approval": "Waiting for admin approval",
+      waiting_for_admin_approval: "Waiting for admin approval",
+      approved: "Completed",
+      completed: "Completed",
+    };
 
-    // Cleaner perspective rules
-    if (report === "pending" && cleaning === "completed") {
-      return { key: "waiting-for-admin-approval", label: "Waiting for admin approval" };
+    // If backend already sets cleanerStatus, respect it but wrap in object
+    const cleanerKey = normalizeKey(job.cleanerStatus);
+    if (cleanerKey && labelMap[cleanerKey]) {
+      return { key: cleanerKey, label: labelMap[cleanerKey] };
     }
+
+    const hasCleaner = Boolean(
+      job.assignedCleanerId || (job.assignedCleanerIds || []).length
+    );
+    const cleaning = normalizeKey(job.cleaningStatus);
+    const report = normalizeKey(job.reportStatus);
+    const status = normalizeKey(job.status);
+
     if (report === "approved" || status === "completed") {
       return { key: "completed", label: "Completed" };
     }
-    if (cleaning === "cleaning_in_progress") {
+    if (report === "pending" && cleaning === "completed") {
+      return { key: "waiting-for-admin-approval", label: "Waiting for admin approval" };
+    }
+    if (cleaning === "cleaning_in_progress" || cleaning === "in_progress") {
       return { key: "cleaning_in_progress", label: "Ongoing" };
     }
     if (hasCleaner) {

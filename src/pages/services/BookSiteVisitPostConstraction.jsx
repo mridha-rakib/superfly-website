@@ -1,6 +1,10 @@
 import React, { useState } from "react";
+import { quoteApi } from "../../services/quoteApi";
+import { toast } from "react-toastify";
+import { useAuthStore } from "../../state/useAuthStore";
 
 function BookSiteVisitPostConstraction() {
+  const { user } = useAuthStore();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -12,22 +16,84 @@ function BookSiteVisitPostConstraction() {
     preferredTime: "",
     specialRequest: ""
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    setShowSuccessModal(true);
-    setFormData({
-      name: "",
-      company: "",
-      email: "",
-      phone: "",
-      address: "",
-      preferredDate: "",
-      preferredTime: "",
-      specialRequest: ""
-    });
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setError("");
+    const normalizeDate = (value) => {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toISOString().slice(0, 10); // YYYY-MM-DD
+    };
+    const payload = {
+      serviceType: "post_construction",
+      name: formData.name.trim(),
+      companyName: formData.company.trim(),
+      email: formData.email.trim(),
+      phoneNumber: formData.phone.trim(),
+      businessAddress: formData.address.trim(),
+      preferredDate: normalizeDate(formData.preferredDate),
+      preferredTime: formData.preferredTime.trim(),
+      specialRequest: formData.specialRequest.trim(),
+    };
+
+    if (
+      !payload.name ||
+      !payload.companyName ||
+      !payload.email ||
+      !payload.phoneNumber ||
+      !payload.businessAddress ||
+      !payload.preferredDate ||
+      !payload.preferredTime ||
+      !payload.specialRequest
+    ) {
+      setError("All fields are required. Please complete the form.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    quoteApi
+      .createPostConstructionRequest({
+        ...payload,
+      })
+      .then(() => {
+        setShowSuccessModal(true);
+        setFormData({
+          name: "",
+          company: "",
+          email: "",
+          phone: "",
+          address: "",
+          preferredDate: "",
+          preferredTime: "",
+          specialRequest: ""
+        });
+      })
+      .catch((err) => {
+        const raw = err?.response?.data;
+        const msg =
+          raw?.message ||
+          raw?.error ||
+          err?.message ||
+          "Could not submit request. Please try again.";
+        setError(msg);
+        toast.error(msg);
+      })
+      .finally(() => setIsSubmitting(false));
   };
+  const handleInputChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
   const closeModal = () => {
     setShowSuccessModal(false);
   };
@@ -46,6 +112,11 @@ function BookSiteVisitPostConstraction() {
         className="bg-white shadow-lg rounded-xl p-6 md:p-8 space-y-6 border border-gray-200"
         onSubmit={handleSubmit}
       >
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
         {/* Row 1: Name & Company */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
@@ -55,6 +126,8 @@ function BookSiteVisitPostConstraction() {
             <input
               type="text"
               id="name"
+              value={formData.name}
+              onChange={handleInputChange}
               placeholder="Name"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
@@ -66,6 +139,8 @@ function BookSiteVisitPostConstraction() {
             <input
               type="text"
               id="company"
+              value={formData.company}
+              onChange={handleInputChange}
               placeholder="Company Name"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
@@ -81,6 +156,8 @@ function BookSiteVisitPostConstraction() {
             <input
               type="email"
               id="email"
+              value={formData.email}
+              onChange={handleInputChange}
               placeholder="Email"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
@@ -92,6 +169,8 @@ function BookSiteVisitPostConstraction() {
             <input
               type="tel"
               id="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
               placeholder="Phone Number"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
@@ -101,41 +180,48 @@ function BookSiteVisitPostConstraction() {
         {/* Row 3: Address */}
         <div className="flex flex-col">
           <label htmlFor="address" className="mb-2 font-medium text-gray-700">
-            Business Address
+            Visited Area
           </label>
-          <input
-            type="text"
-            id="address"
-            placeholder="Business Address"
-            className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
-          />
-        </div>
+            <input
+              type="text"
+              id="address"
+              value={formData.address}
+              onChange={handleInputChange}
+              placeholder="Visited Area"
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+            />
+          </div>
 
         {/* Row 4: Preferred Date & Time */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
             <label
               htmlFor="preferred-date"
+              htmlFor="preferredDate"
               className="mb-2 font-medium text-gray-700"
             >
               Preferred Date
             </label>
             <input
               type="date"
-              id="preferred-date"
+              id="preferredDate"
+              value={formData.preferredDate}
+              onChange={handleInputChange}
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
           </div>
           <div className="flex-1 flex flex-col">
             <label
-              htmlFor="preferred-time"
+              htmlFor="preferredTime"
               className="mb-2 font-medium text-gray-700"
             >
               Preferred Time
             </label>
             <input
               type="time"
-              id="preferred-time"
+              id="preferredTime"
+              value={formData.preferredTime}
+              onChange={handleInputChange}
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
           </div>
@@ -150,7 +236,9 @@ function BookSiteVisitPostConstraction() {
             Special Request
           </label>
           <textarea
-            id="special-request"
+            id="specialRequest"
+            value={formData.specialRequest}
+            onChange={handleInputChange}
             rows="5"
             placeholder="Write your request here..."
             className="p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#C85344]"
@@ -160,9 +248,10 @@ function BookSiteVisitPostConstraction() {
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full bg-[#C85344] text-white p-4 rounded-xl hover:bg-[#b84335] transition font-medium text-lg"
+          disabled={isSubmitting}
+          className="w-full bg-[#C85344] text-white p-4 rounded-xl hover:bg-[#b84335] transition font-medium text-lg disabled:opacity-60"
         >
-          Book a visit
+          {isSubmitting ? "Submitting..." : "Book a visit"}
         </button>
       </form>
       {/* Success Modal */}

@@ -10,8 +10,10 @@ function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -19,17 +21,30 @@ function Profile() {
       .getProfile()
       .then((res) => {
         const profile = res?.data || res;
-        setUser(profile);
-        setTempUser(profile);
-        setUserInStore(profile);
+        const merged = {
+          ...profile,
+          avatar:
+            profile?.profileImage ||
+            profile?.profileImageUrl ||
+            profile?.avatar ||
+            "",
+        };
+        setUser(merged);
+        setTempUser(merged);
+        setUserInStore(merged);
       })
-      .catch((err) =>
-        setError(
+      .catch((err) => {
+        const msg =
           err?.response?.data?.message ||
-            err?.message ||
-            "Could not load profile. Please try again."
-        )
-      )
+          err?.message ||
+          "Could not load profile. Please try again.";
+        if (msg?.toLowerCase().includes("only client can access")) {
+          // Suppress role-specific noise on profile page
+          setError("");
+        } else {
+          setError(msg);
+        }
+      })
       .finally(() => setIsLoading(false));
   }, [setUserInStore]);
 
@@ -52,17 +67,27 @@ function Profile() {
       };
       const res = await userApi.updateProfile(payload);
       const updated = res?.data || res;
+      const merged = {
+        ...updated,
+        avatar:
+          updated?.profileImage ||
+          updated?.profileImageUrl ||
+          updated?.avatar ||
+          tempUser.avatar,
+      };
       setUser(updated);
-      setTempUser(updated);
-      setUserInStore(updated);
+      setTempUser(merged);
+      setUserInStore(merged);
       setIsEditing(false);
       setSuccess("Profile updated successfully.");
     } catch (err) {
-      setError(
+      const msg =
         err?.response?.data?.message ||
-          err?.message ||
-          "Could not update profile. Please try again."
-      );
+        err?.message ||
+        "Could not update profile. Please try again.";
+      if (!msg?.toLowerCase().includes("only client can access")) {
+        setError(msg);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -70,9 +95,39 @@ function Profile() {
 
   const handleCancel = () => {
     setTempUser(user);
+    setPhotoPreview(null);
     setIsEditing(false);
     setError("");
     setSuccess("");
+  };
+
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoPreview(URL.createObjectURL(file));
+    setError("");
+    setSuccess("");
+    setIsUploading(true);
+    try {
+      const updated = await userApi.uploadProfilePhoto(file);
+      const profileImage =
+        updated?.profileImage || updated?.profileImageUrl || updated?.avatar;
+      const merged = { ...(user || {}), ...updated, avatar: profileImage, profileImage };
+      setUser(merged);
+      setTempUser(merged);
+      setUserInStore(merged);
+      setPhotoPreview(null);
+      setSuccess("Profile photo updated.");
+    } catch (err) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not upload photo. Please try again."
+      );
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
   };
 
   if (isLoading) {
@@ -95,17 +150,34 @@ function Profile() {
     <div className="max-w-3xl mx-auto py-10 px-5 space-y-6">
       <div className="bg-gradient-to-r from-[#fde7e1] to-white border border-[#f6d5ce] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
-          {user?.avatar ? (
-            <img
-              src={user.avatar}
-              alt="avatar"
-              className="w-16 h-16 rounded-full object-cover border border-white shadow-md"
-            />
-          ) : (
-            <div className="w-16 h-16 rounded-full bg-[#C85344] text-white flex items-center justify-center text-xl font-semibold border border-white shadow-md">
-              {(user?.fullName || user?.name || "U").charAt(0).toUpperCase()}
-            </div>
-          )}
+          <div className="relative">
+            {photoPreview || user?.avatar ? (
+              <img
+                src={photoPreview || user.avatar}
+                alt="avatar"
+                className="w-16 h-16 rounded-full object-cover border border-white shadow-md"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-[#C85344] text-white flex items-center justify-center text-xl font-semibold border border-white shadow-md">
+                {(user?.fullName || user?.name || "U").charAt(0).toUpperCase()}
+              </div>
+            )}
+            <label className="absolute -bottom-2 -right-2 inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-gray-700 border border-gray-200 shadow cursor-pointer hover:text-[#C85344]">
+              {isUploading ? "..." : "Change"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setPhotoPreview(URL.createObjectURL(file));
+                    handlePhotoChange(e);
+                  }
+                }}
+              />
+            </label>
+          </div>
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-[#C85344]">Account</p>
             <h1 className="text-3xl font-bold text-gray-900 mt-1">Profile</h1>
