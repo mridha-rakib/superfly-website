@@ -47,4 +47,16 @@ export const quoteApi = {
     const response = await httpClient.post("/quotes/post-construction", payload);
     return unwrap(response);
   },
+
+  listCleanerAssigned: async (params) => {
+    const response = await httpClient.get("/quotes/cleaner/assigned", {
+      params,
+    });
+    return unwrap(response);
+  },
+
+  getCleanerEarnings: async () => {
+    const response = await httpClient.get("/quotes/cleaner/earnings");
+    return unwrap(response);
+  },
 };

@@ -21,7 +21,6 @@ function ResidentialCleaning() {
   }));
 
   const [services, setServices] = useState([]);
-  const [selectedItem, setSelectedItem] = useState("");
   const [details, setDetails] = useState({});
   const [isLoadingServices, setIsLoadingServices] = useState(false);
   const [serviceDate, setServiceDate] = useState(
@@ -59,23 +58,23 @@ function ResidentialCleaning() {
       .finally(() => setIsLoadingServices(false));
   }, []);
 
-  const handleChange = (field, delta) => {
+  const toggleService = (service) => {
+    const code = service.code || service.value || service.name;
     setDetails((prev) => {
-      const nextValue = Math.max(0, (prev[field] || 0) + delta);
-      const next = { ...prev, [field]: nextValue };
-      if (nextValue <= 0) {
-        delete next[field];
+      const next = { ...prev };
+      if (next[code]) {
+        delete next[code];
+        return next;
       }
+      next[code] = service.inputType === "QUANTITY" ? 1 : 1;
       return next;
     });
   };
 
-  const handleSelect = (e) => {
-    const value = e.target.value;
-    setSelectedItem(value);
-    if (value && !details[value]) {
-      setDetails((prev) => ({ ...prev, [value]: 1 }));
-    }
+  const handleQuantityChange = (service, value) => {
+    const code = service.code || service.value || service.name;
+    const qty = Math.max(1, Number(value) || 1);
+    setDetails((prev) => ({ ...prev, [code]: qty }));
   };
 
   const priceMap = useMemo(() => {
@@ -92,6 +91,8 @@ function ResidentialCleaning() {
         value: s.code || s.value || s.name,
         label: s.name || s.label || s.code,
         price: s.currentPrice || s.price || 0,
+        inputType: s.inputType || "BOOLEAN",
+        quantityLabel: s.quantityLabel,
       })),
     [services]
   );
@@ -327,33 +328,68 @@ function ResidentialCleaning() {
           </div>
 
           {/* Cleaning Options */}
-          <div className="flex flex-col">
-            <label
-              htmlFor="cleaning-options"
-              className="mb-1 font-medium text-gray-700"
-            >
+          <div className="flex flex-col gap-3">
+            <label className="mb-1 font-medium text-gray-700">
               Cleaning Options
             </label>
-            <select
-              id="cleaning-options"
-              value={selectedItem}
-              onChange={handleSelect}
-              disabled={isLoadingServices || optionList.length === 0}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344] disabled:bg-gray-100"
-            >
-              <option value="">
-                {isLoadingServices ? "Loading services..." : "Select Cleaning Option"}
-              </option>
-              {optionList.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label} {item.price ? `($${item.price})` : ""}
-                </option>
-              ))}
-            </select>
-            {optionList.length === 0 && !isLoadingServices && (
-              <p className="text-sm text-red-600 mt-2">
+            {isLoadingServices ? (
+              <p className="text-gray-600">Loading services...</p>
+            ) : optionList.length === 0 ? (
+              <p className="text-sm text-red-600">
                 No cleaning services available. Please try again later.
               </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {optionList.map((item) => {
+                  const selected = details[item.value] !== undefined;
+                  return (
+                    <div
+                      key={item.value}
+                      className={`rounded-lg border p-4 flex flex-col gap-2 ${
+                        selected ? "border-[#C85344] bg-[#fff6f4]" : "border-gray-200"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => toggleService(item)}
+                          className="mt-1 h-5 w-5 accent-[#C85344]"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-gray-900">
+                              {item.label}
+                            </span>
+                            <span className="text-sm font-medium text-gray-700">
+                              ${item.price}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            {item.inputType === "QUANTITY"
+                              ? item.quantityLabel || "Enter quantity"
+                              : "Check to add"}
+                          </p>
+                        </div>
+                      </div>
+                      {selected && item.inputType === "QUANTITY" && (
+                        <div className="flex items-center gap-2 pl-8">
+                          <label className="text-sm text-gray-700">
+                            {item.quantityLabel || "Quantity"}
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={details[item.value] ?? 1}
+                            onChange={(e) => handleQuantityChange(item, e.target.value)}
+                            className="w-20 border rounded px-2 py-1 text-sm focus:border-[#C85344] focus:outline-none focus:ring-1 focus:ring-[#C85344]/40"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
@@ -389,25 +425,44 @@ function ResidentialCleaning() {
                     key={key}
                     className="flex justify-between items-center border-b border-gray-200 py-2"
                   >
-                    <span className="font-medium text-gray-800">
-                      {item?.label || key}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleChange(key, -1)}
-                        className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300 transition"
-                      >
-                        -
-                      </button>
-                      <span className="w-6 text-center">{value}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleChange(key, 1)}
-                        className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300 transition"
-                      >
-                        +
-                      </button>
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium text-gray-800">
+                        {item?.label || key}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        ${priceMap[key] || 0}
+                        {item?.inputType === "QUANTITY" ? " each" : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {item?.inputType === "QUANTITY" ? (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item, (value || 1) - 1)
+                            }
+                            className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300 transition"
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center">{value}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleQuantityChange(item, (value || 1) + 1)
+                            }
+                            className="w-8 h-8 bg-gray-200 rounded hover:bg-gray-300 transition"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-600">Selected</span>
+                      )}
+                      <span className="w-20 text-right font-semibold text-gray-900">
+                        ${((priceMap[key] || 0) * (value || 1)).toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 );

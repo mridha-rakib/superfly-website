@@ -182,21 +182,20 @@ function BookSiteVisitPostConstraction() {
           <label htmlFor="address" className="mb-2 font-medium text-gray-700">
             Visited Area
           </label>
-            <input
-              type="text"
-              id="address"
-              value={formData.address}
-              onChange={handleInputChange}
-              placeholder="Visited Area"
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
-            />
-          </div>
+          <input
+            type="text"
+            id="address"
+            value={formData.address}
+            onChange={handleInputChange}
+            placeholder="Visited Area"
+            className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+          />
+        </div>
 
         {/* Row 4: Preferred Date & Time */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
             <label
-              htmlFor="preferred-date"
               htmlFor="preferredDate"
               className="mb-2 font-medium text-gray-700"
             >
@@ -230,7 +229,7 @@ function BookSiteVisitPostConstraction() {
         {/* Row 5: Special Request */}
         <div className="flex flex-col">
           <label
-            htmlFor="special-request"
+            htmlFor="specialRequest"
             className="mb-2 font-medium text-gray-700"
           >
             Special Request
