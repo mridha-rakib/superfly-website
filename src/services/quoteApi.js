@@ -14,13 +14,6 @@ export const quoteApi = {
     return unwrap(response);
   },
 
-  listCleanerAssigned: async (params) => {
-    const response = await httpClient.get("/quotes/cleaner/assigned", {
-      params,
-    });
-    return unwrap(response);
-  },
-
   getStatus: async (params) => {
     const response = await httpClient.get("/quotes/payment-status", {
       params,
@@ -30,6 +23,11 @@ export const quoteApi = {
 
   listClient: async (params) => {
     const response = await httpClient.get("/quotes/client", { params });
+    return unwrap(response);
+  },
+
+  getQuoteById: async (quoteId) => {
+    const response = await httpClient.get(`/quotes/${quoteId}`);
     return unwrap(response);
   },
 

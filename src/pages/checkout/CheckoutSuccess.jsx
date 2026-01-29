@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../state/useAuthStore";
 import { useQuoteStore } from "../../state/useQuoteStore";
+import { formatTimeTo12Hour } from "../../lib/time-utils";
 
 function CheckoutSuccess() {
   const navigate = useNavigate();
@@ -82,7 +83,8 @@ function CheckoutSuccess() {
   }, [lastQuote, lastStatus]);
 
   const preferredTimeLabel =
-    lastQuote?.preferredTime || lastStatus?.preferredTime || "--";
+    formatTimeTo12Hour(lastQuote?.preferredTime || lastStatus?.preferredTime) ||
+    "--";
   const serviceDateLabel = lastQuote?.serviceDate || lastStatus?.serviceDate || "--";
 
   const bookingCta = isAuthenticated && role === "client" ? "/my-booking" : "/";

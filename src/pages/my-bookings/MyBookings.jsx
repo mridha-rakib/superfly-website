@@ -8,6 +8,9 @@ import {
   FiCheckCircle,
 } from "react-icons/fi";
 import { quoteApi } from "../../services/quoteApi";
+import { useAuthStore } from "../../state/useAuthStore";
+import { useReviewStore } from "../../state/useReviewStore";
+import { formatTimeTo12Hour } from "../../lib/time-utils";
 
 function MyBookings() {
   const [activeTab, setActiveTab] = useState("all");
@@ -17,11 +20,31 @@ function MyBookings() {
   const [comment, setComment] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const { isAuthenticated, role } = useAuthStore((state) => ({
+    isAuthenticated: state.isAuthenticated,
+    role: state.role,
+  }));
+  const reviews = useReviewStore((state) => state.reviews);
+  const addReview = useReviewStore((state) => state.addReview);
+  const fetchReviews = useReviewStore((state) => state.fetchReviews);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState("");
+  const [isReviewSubmitting, setIsReviewSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
+    if (!isAuthenticated || role !== "client") {
+      setBookings([]);
+      setError(
+        !isAuthenticated
+          ? "Sign in as a client to view your bookings."
+          : "Clients only can view bookings here."
+      );
+      setIsLoading(false);
+      return;
+    }
     const fetchBookings = async () => {
       setIsLoading(true);
       setError("");
@@ -47,7 +70,16 @@ function MyBookings() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isAuthenticated, role]);
+
+  useEffect(() => {
+    if (!isAuthenticated || role !== "client") {
+      return;
+    }
+    fetchReviews().catch(() => {
+      /* swallow errors; UI will rely on submission feedback */
+    });
+  }, [fetchReviews, isAuthenticated, role]);
 
   const tabs = [
     { id: "all", label: "All" },
@@ -65,7 +97,10 @@ function MyBookings() {
       Boolean(quote.assignedCleanerIds && quote.assignedCleanerIds.length);
     const cleaning = quote.cleaningStatus;
     const report = quote.reportStatus;
-    const isCompleted = report === "approved" || quote.status === "completed";
+    const isCompleted =
+      report === "approved" ||
+      quote.status === "completed" ||
+      quote.status === "reviewed";
     if (isCompleted) return "completed";
     if (report === "pending" && cleaning === "completed")
       return "report_submitted";
@@ -92,6 +127,20 @@ function MyBookings() {
   const renderButtons = (booking) => {
     const status = deriveStatus(booking);
     if (status === "completed") {
+      const bookingId = booking._id || booking.id;
+      const hasReview = reviews.some(
+        (review) => review.bookingId === bookingId
+      );
+      if (hasReview) {
+        return (
+          <button
+            disabled
+            className="px-4 py-2 bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed"
+          >
+            Review submitted
+          </button>
+        );
+      }
       return (
         <button
           onClick={() => openReviewModal(booking)}
@@ -136,22 +185,63 @@ function MyBookings() {
     setModalBooking(booking);
     setRating(0);
     setComment("");
+    setReviewError("");
   };
 
   const closeModal = () => {
     setModalBooking(null);
+    setRating(0);
+    setComment("");
+    setReviewError("");
   };
 
-  const submitReview = () => {
-    console.log("Booking:", modalBooking.bookingId);
-    console.log("Rating:", rating);
-    console.log("Comment:", comment);
-    closeModal();
-    alert("Review submitted successfully!");
+  const submitReview = async () => {
+    if (!modalBooking) return;
+    if (rating === 0) {
+      setReviewError("Please select a rating before submitting your review.");
+      return;
+    }
+    setReviewError("");
+    setIsReviewSubmitting(true);
+    try {
+      const bookingId = modalBooking._id || modalBooking.id;
+      await addReview({
+        quoteId: bookingId,
+        clientName:
+          modalBooking.contactName ||
+          modalBooking.firstName ||
+          modalBooking.email ||
+          "Client",
+        rating,
+        comment,
+      });
+      setReviewSuccess("Thank you! Your review has been submitted.");
+      closeModal();
+    } catch (err) {
+      setReviewError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not submit review. Please try again."
+      );
+    } finally {
+      setIsReviewSubmitting(false);
+    }
   };
+
+  useEffect(() => {
+    if (!reviewSuccess) return undefined;
+    const timer = setTimeout(() => setReviewSuccess(""), 4000);
+    return () => clearTimeout(timer);
+  }, [reviewSuccess]);
 
   return (
     <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+      {reviewSuccess && (
+        <div className="mb-5 px-4 py-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm flex items-center gap-2">
+          <FiCheckCircle className="shrink-0" />
+          <span>{reviewSuccess}</span>
+        </div>
+      )}
       <div className="text-center mb-8">
         <p className="text-xs tracking-[0.3em] uppercase text-[var(--primary-color)]">
           Overview
@@ -234,9 +324,23 @@ function MyBookings() {
                   </span>
                   <span className="inline-flex items-center gap-2">
                     <FiClock className="text-gray-500" />{" "}
-                    {booking.preferredTime || "Preferred Time: N/A"}
+                    {formatTimeTo12Hour(booking.preferredTime) || "Preferred Time: N/A"}
                   </span>
                 </div>
+                {booking.assignedCleaners?.length ? (
+                  <div className="mt-2 text-sm text-gray-600">
+                    Assigned cleaner
+                    <span className="ml-1 font-semibold text-gray-900">
+                      {booking.assignedCleaners
+                        .map((cleaner) => cleaner.fullName || cleaner.email || cleaner._id)
+                        .join(", ")}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Cleaner assignment pending.
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col sm:items-end gap-2 min-w-[160px]">
@@ -263,7 +367,7 @@ function MyBookings() {
               <div>
                 <h2 className="text-xl font-bold">Leave a Review</h2>
                 <p className="text-sm text-gray-600">
-                  Booking: {modalBooking.bookingId}
+                  Booking ID: {modalBooking._id || modalBooking.id}
                 </p>
               </div>
             </div>
@@ -289,6 +393,9 @@ function MyBookings() {
               placeholder="Share your experience..."
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[color:var(--primary-color)] resize-none mb-4"
             ></textarea>
+            {reviewError && (
+              <p className="text-sm text-red-600 mb-2">{reviewError}</p>
+            )}
 
             <div className="flex justify-end gap-2">
               <button
@@ -299,9 +406,10 @@ function MyBookings() {
               </button>
               <button
                 onClick={submitReview}
+                disabled={isReviewSubmitting}
                 className="px-4 py-2 bg-[var(--primary-color)] text-white rounded-lg hover:bg-[var(--primary-color-strong)]"
               >
-                Submit
+                {isReviewSubmitting ? "Submitting..." : "Submit"}
               </button>
             </div>
           </div>

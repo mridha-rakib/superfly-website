@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAuthStore } from "../../state/useAuthStore";
 import { useQuoteStore } from "../../state/useQuoteStore";
 import { cleaningServiceApi } from "../../services/cleaningServiceApi";
+import { formatTimeTo12Hour, parseTimeTo24Hour } from "../../lib/time-utils";
 
 function ResidentialCleaning() {
   const { isAuthenticated, user } = useAuthStore((state) => ({
@@ -27,6 +28,9 @@ function ResidentialCleaning() {
     () => new Date().toISOString().slice(0, 10)
   );
   const [serviceTime, setServiceTime] = useState("09:00");
+  const [serviceTimeInput, setServiceTimeInput] = useState(() =>
+    formatTimeTo12Hour("09:00")
+  );
   const [contact, setContact] = useState({
     name: "",
     address: "",
@@ -112,6 +116,16 @@ function ResidentialCleaning() {
     return payload;
   }, [details]);
 
+  const handleServiceTimeBlur = () => {
+    const normalized = parseTimeTo24Hour(serviceTimeInput);
+    if (normalized) {
+      setServiceTime(normalized);
+      setServiceTimeInput(formatTimeTo12Hour(normalized));
+      return;
+    }
+    setServiceTimeInput(formatTimeTo12Hour(serviceTime));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -124,10 +138,13 @@ function ResidentialCleaning() {
       setError("Please choose a service date.");
       return;
     }
-    if (!serviceTime) {
-      setError("Please choose a service time.");
+    const normalizedServiceTime = parseTimeTo24Hour(serviceTimeInput);
+    if (!normalizedServiceTime) {
+      setError("Please enter a valid service time.");
       return;
     }
+    setServiceTime(normalizedServiceTime);
+    setServiceTimeInput(formatTimeTo12Hour(normalizedServiceTime));
     setIsSubmitting(true);
     try {
       const fullName =
@@ -143,7 +160,7 @@ function ResidentialCleaning() {
       const payload = {
         services: serviceSelections,
         serviceDate,
-        preferredTime: serviceTime,
+        preferredTime: normalizedServiceTime,
         paymentFlow: "checkout",
         ...(isAuthenticated
           ? {
@@ -318,10 +335,13 @@ function ResidentialCleaning() {
               Preferred Service Time
             </label>
             <input
-              type="time"
+              type="text"
               id="service-time"
-              value={serviceTime}
-              onChange={(e) => setServiceTime(e.target.value)}
+              value={serviceTimeInput}
+              onChange={(e) => setServiceTimeInput(e.target.value)}
+              onBlur={handleServiceTimeBlur}
+              placeholder="09:00 AM"
+              inputMode="numeric"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
               required
             />

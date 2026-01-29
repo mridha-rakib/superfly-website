@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
+import { formatTimeTo12Hour } from "../../lib/time-utils";
 
 function MyJobs() {
   const navigate = useNavigate();
@@ -18,21 +19,22 @@ function MyJobs() {
     { id: "all", label: "All Jobs" },
     { id: "pending", label: "Pending" },
     { id: "cleaning_in_progress", label: "Ongoing" },
-    { id: "waiting-for-admin-approval", label: "Waiting Approval" },
+    { id: "waiting-for-admin-approval", label: "Admin approval pending" },
     { id: "completed", label: "Completed" },
   ];
 
   const deriveStatus = (job) => {
     const normalizeKey = (val) => (val || "").toLowerCase();
-    const labelMap = {
-      pending: "Pending",
-      assigned: "Pending",
-      cleaning_in_progress: "Ongoing",
-      "waiting-for-admin-approval": "Waiting for admin approval",
-      waiting_for_admin_approval: "Waiting for admin approval",
-      approved: "Completed",
-      completed: "Completed",
-    };
+      const labelMap = {
+        pending: "Pending",
+        assigned: "Pending",
+        cleaning_in_progress: "Ongoing",
+        "waiting-for-admin-approval": "Admin approval pending.",
+        waiting_for_admin_approval: "Admin approval pending.",
+        approved: "Completed",
+        completed: "Completed",
+        reviewed: "Completed",
+      };
 
     // If backend already sets cleanerStatus, respect it but wrap in object
     const cleanerKey = normalizeKey(job.cleanerStatus);
@@ -47,11 +49,15 @@ function MyJobs() {
     const report = normalizeKey(job.reportStatus);
     const status = normalizeKey(job.status);
 
-    if (report === "approved" || status === "completed") {
-      return { key: "completed", label: "Completed" };
-    }
+      if (
+        report === "approved" ||
+        status === "completed" ||
+        status === "reviewed"
+      ) {
+        return { key: "completed", label: "Completed" };
+      }
     if (report === "pending" && cleaning === "completed") {
-      return { key: "waiting-for-admin-approval", label: "Waiting for admin approval" };
+      return { key: "waiting-for-admin-approval", label: "Admin approval pending." };
     }
     if (cleaning === "cleaning_in_progress" || cleaning === "in_progress") {
       return { key: "cleaning_in_progress", label: "Ongoing" };
@@ -98,7 +104,7 @@ function MyJobs() {
       case "cleaning_in_progress":
         return "bg-blue-100 text-blue-700 border border-blue-200";
       case "waiting-for-admin-approval":
-        return "bg-purple-100 text-purple-700 border border-purple-200";
+        return "bg-gradient-to-r from-purple-50 to-purple-100 text-purple-900 border border-purple-200 shadow-sm ring-1 ring-purple-100";
       case "completed":
         return "bg-emerald-100 text-emerald-700 border border-emerald-200";
       default:
@@ -192,7 +198,8 @@ function MyJobs() {
                     📅
                   </span>
                   <span>
-                    {job.serviceDate} {job.preferredTime ? `• ${job.preferredTime}` : ""}
+                    {job.serviceDate}{" "}
+                    {job.preferredTime ? `• ${formatTimeTo12Hour(job.preferredTime)}` : ""}
                   </span>
                 </div>
 

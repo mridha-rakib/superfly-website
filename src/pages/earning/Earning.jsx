@@ -75,16 +75,21 @@ function Earning() {
         label: "Total Earnings",
         value: formatMoney(summary.totalEarning, summary.currency),
         icon: <FaDollarSign className="text-2xl text-[#C85344]" />,
+        helper: "Total from completed jobs.",
       },
       {
         label: "Pending Payments",
         value: formatMoney(summary.pendingAmount, summary.currency),
         icon: <FaClock className="text-2xl text-yellow-500" />,
+        helper: "After you submit a report, admin approval keeps it pending.",
       },
       {
         label: "Paid Amount",
         value: formatMoney(summary.paidAmount, summary.currency),
-        icon: <FaCheckCircle className="text-2xl text-green-500" />,
+        icon: <FaCheckCircle className="text-2xl text-red-500" />,
+        helper: "Added to this tab as soon as the admin approves the report.",
+        cardClass: "border-red-100 text-red-900 ring-1 ring-red-50 shadow-lg hover:shadow-xl",
+        valueClass: "text-red-900",
       },
     ],
     [summary]
@@ -101,10 +106,35 @@ function Earning() {
     }
   };
 
+  const getJobStatusBadge = (variant) => {
+    switch (variant) {
+      case "completed":
+        return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+      case "pendingApproval":
+        return "bg-amber-50 text-amber-800 border border-amber-200";
+      default:
+        return "bg-gray-100 text-gray-700 border border-gray-200";
+    }
+  };
+
   const resolvedJobs = useMemo(() => {
     return (jobs || []).map((job) => {
-      const status =
-        job.reportStatus === "approved" ? "paid" : "pending";
+      const isCompleted =
+        job.reportStatus === "approved" || job.status === "completed";
+      const isPendingApproval = job.reportStatus === "pending" && !isCompleted;
+
+      const paymentStatus = isCompleted ? "paid" : "pending";
+      const statusLabel = isCompleted
+        ? "Completed"
+        : isPendingApproval
+        ? "Pending admin approval"
+        : "Assigned";
+      const statusVariant = isCompleted
+        ? "completed"
+        : isPendingApproval
+        ? "pendingApproval"
+        : "assigned";
+
       return {
         id: job._id || job.id || "N/A",
         type: job.serviceType
@@ -112,7 +142,9 @@ function Earning() {
           : "Cleaning",
         date: job.serviceDate || "-",
         amount: job.cleanerEarningAmount || 0,
-        paymentStatus: status,
+        paymentStatus,
+        statusLabel,
+        statusVariant,
       };
     });
   }, [jobs]);
@@ -143,13 +175,16 @@ function Earning() {
         {stats.map((stat, i) => (
           <div
             key={i}
-            className="bg-white shadow-md border rounded-xl p-6 flex flex-col items-center hover:shadow-lg transition"
+            className={`bg-white shadow-md border rounded-xl p-6 flex flex-col items-center hover:shadow-lg transition ${stat.cardClass || ""}`}
           >
             <div className="mb-3">{stat.icon}</div>
             <p className="text-gray-600 text-sm font-medium">{stat.label}</p>
-            <p className="text-2xl md:text-3xl font-bold mt-1">
-              {loading ? "…" : stat.value}
+            <p className={`text-2xl md:text-3xl font-bold mt-1 ${stat.valueClass || "text-gray-900"}`}>
+              {loading ? "..." : stat.value}
             </p>
+            {stat.helper && (
+              <p className="text-xs text-gray-500 text-center mt-2 px-2">{stat.helper}</p>
+            )}
           </div>
         ))}
       </div>
@@ -165,33 +200,42 @@ function Earning() {
             <p className="text-gray-500">No jobs found.</p>
           ) : (
             resolvedJobs.map((job) => (
-            <div
-              key={job.id}
-              className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 bg-white border rounded-xl shadow-md hover:shadow-lg transition"
-            >
-              {/* Left Section */}
-              <div className="mb-3 md:mb-0">
-                <p className="font-semibold text-lg text-gray-900">{job.type}</p>
-                <p className="text-gray-500 text-sm">
-                  Job ID: <span className="font-medium">{job.id}</span>
-                </p>
-                <p className="text-gray-500 text-sm">Date: {job.date}</p>
-              </div>
+              <div
+                key={job.id}
+                className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 bg-white border rounded-xl shadow-md hover:shadow-lg transition"
+              >
+                {/* Left Section */}
+                <div className="mb-3 md:mb-0">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="font-semibold text-lg text-gray-900">{job.type}</p>
+                    <span
+                      className={`px-3 py-1 text-xs font-semibold rounded-full ${getJobStatusBadge(
+                        job.statusVariant
+                      )}`}
+                    >
+                      {job.statusLabel}
+                    </span>
+                  </div>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Job ID: <span className="font-medium">{job.id}</span>
+                  </p>
+                  <p className="text-gray-500 text-sm">Date: {job.date}</p>
+                </div>
 
-              {/* Right Section */}
-              <div className="text-right">
-                <p className="font-semibold text-lg text-gray-900">
-                  {formatMoney(job.amount, summary.currency)}
-                </p>
-                <span
-                  className={`px-4 py-1 text-sm rounded-full mt-2 inline-block font-medium ${getPaymentBadge(
-                    job.paymentStatus
-                  )}`}
-                >
-                  {job.paymentStatus.toUpperCase()}
-                </span>
+                {/* Right Section */}
+                <div className="text-right">
+                  <p className="font-semibold text-lg text-gray-900">
+                    {formatMoney(job.amount, summary.currency)}
+                  </p>
+                  <span
+                    className={`px-4 py-1 text-sm rounded-full mt-2 inline-block font-medium ${getPaymentBadge(
+                      job.paymentStatus
+                    )}`}
+                  >
+                    {job.paymentStatus.toUpperCase()}
+                  </span>
+                </div>
               </div>
-            </div>
             ))
           )}
         </div>

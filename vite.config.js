@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     allowedHosts: [
-      'became-considered-acc-elvis.trycloudflare.com'
+      'neighborhood-rental-water-val.trycloudflare.com'
     ]
   }
 });
