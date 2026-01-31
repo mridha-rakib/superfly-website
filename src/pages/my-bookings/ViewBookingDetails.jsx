@@ -276,7 +276,7 @@ function ViewBookingDetails() {
         </Card>
       </section>
 
-      <Card title="Report Submission">
+      {/* <Card title="Report Submission">
         {booking.reportStatus === "pending" || booking.reportStatus === "approved" ? (
           <div className="space-y-2 text-sm text-gray-700">
             <p>
@@ -302,7 +302,7 @@ function ViewBookingDetails() {
             No report submitted yet. Once the cleaner submits the cleaning report, the details will appear here.
           </p>
         )}
-      </Card>
+      </Card> */}
 
       <Card title="Address & Notes">
         <div className="space-y-4">
