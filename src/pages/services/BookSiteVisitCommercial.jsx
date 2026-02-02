@@ -1,52 +1,97 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { toast } from "react-toastify";
 import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
-import { toast } from "react-toastify";
 
 function BookSiteVisitCommercial() {
   const { user } = useAuthStore();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    company: "",
-    email: "",
-    phone: "",
-    address: "",
+    name: user?.fullName || user?.name || "",
+    companyName: "",
+    companyEmail: "",
+    companyPhone: "",
+    companyAddress: "",
     preferredDate: "",
     preferredTime: "",
-    specialRequest: ""
+    specialRequest: "",
+    squareFoot: "",
+    cleaningFrequency: "",
+    cleaningServices: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  const cleaningServiceOptions = [
+    { value: "janitorial_services", label: "Janitorial Services" },
+    { value: "carpet_cleaning", label: "Carpet Cleaning" },
+    { value: "window_cleaning", label: "Window Cleaning" },
+    { value: "pressure_washing", label: "Pressure Washing" },
+    { value: "floor_cleaning", label: "Floor Cleaning" },
+  ];
+
+  const frequencyOptions = [
+    { value: "daily", label: "Daily" },
+    { value: "weekly", label: "Weekly" },
+    { value: "monthly", label: "Monthly" },
+  ];
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
     setError("");
+
+    const numericSquareFoot = Number(formData.squareFoot);
+    const validationErrors = [];
+
+    if (!formData.companyName.trim()) validationErrors.push("Company Name is required.");
+    if (!formData.companyAddress.trim()) validationErrors.push("Company Address is required.");
+    if (!formData.companyPhone.trim()) validationErrors.push("Company Phone Number is required.");
+    if (!formData.companyEmail.trim()) validationErrors.push("Company Email is required.");
+    if (!formData.preferredDate) validationErrors.push("Preferred Date is required.");
+    if (!formData.preferredTime) validationErrors.push("Preferred Time is required.");
+    if (!formData.cleaningFrequency) validationErrors.push("Cleaning Frequency is required.");
+    if (!formData.cleaningServices.length)
+      validationErrors.push("Select at least one type of cleaning service.");
+    if (!Number.isFinite(numericSquareFoot) || numericSquareFoot <= 0)
+      validationErrors.push("Building Size must be a positive number.");
+
+    if (validationErrors.length) {
+      setIsSubmitting(false);
+      setError(validationErrors.join(" "));
+      return;
+    }
+
     quoteApi
       .createCommercialRequest({
         serviceType: "commercial",
         name: formData.name,
-        companyName: formData.company,
-        email: formData.email,
-        phoneNumber: formData.phone,
-        businessAddress: formData.address,
+        companyName: formData.companyName,
+        email: formData.companyEmail,
+        phoneNumber: formData.companyPhone,
+        businessAddress: formData.companyAddress,
         preferredDate: formData.preferredDate,
         preferredTime: formData.preferredTime,
         specialRequest: formData.specialRequest,
+        squareFoot: numericSquareFoot,
+        cleaningFrequency: formData.cleaningFrequency,
+        cleaningServices: formData.cleaningServices,
       })
       .then(() => {
         setShowSuccessModal(true);
         setFormData({
-          name: "",
-          company: "",
-          email: "",
-          phone: "",
-          address: "",
+          name: user?.fullName || user?.name || "",
+          companyName: "",
+          companyEmail: "",
+          companyPhone: "",
+          companyAddress: "",
           preferredDate: "",
           preferredTime: "",
-          specialRequest: ""
+          specialRequest: "",
+          squareFoot: "",
+          cleaningFrequency: "",
+          cleaningServices: [],
         });
       })
       .catch((err) => {
@@ -62,10 +107,20 @@ function BookSiteVisitCommercial() {
 
   const handleInputChange = (e) => {
     const { id, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [id]: value
+      [id]: value,
     }));
+  };
+
+  const handleServiceToggle = (value) => {
+    setFormData((prev) => {
+      const exists = prev.cleaningServices.includes(value);
+      const updated = exists
+        ? prev.cleaningServices.filter((item) => item !== value)
+        : [...prev.cleaningServices, value];
+      return { ...prev, cleaningServices: updated };
+    });
   };
 
   const closeModal = () => {
@@ -74,11 +129,11 @@ function BookSiteVisitCommercial() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-5 md:px-8">
-      <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 text-center">
-        Book Site Visit for Commercial Cleaning
+      <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 text-center">
+        Commercial Cleaning Information
       </h1>
       <p className="mb-8 text-gray-700 text-center text-lg">
-        Fill up the form below to book a site visit for commercial cleaning.
+        Provide your company details so we can prepare an accurate quote.
       </p>
 
       <form
@@ -90,31 +145,30 @@ function BookSiteVisitCommercial() {
             {error}
           </div>
         )}
-        {/* Row 1: Name & Company Name */}
+        {/* Contact + Company */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
             <label htmlFor="name" className="mb-2 font-medium text-gray-700">
-              Name
+              Contact Name
             </label>
             <input
               type="text"
               id="name"
-              placeholder="Name"
+              placeholder="Contact name"
               value={formData.name}
               onChange={handleInputChange}
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
-              required
             />
           </div>
           <div className="flex-1 flex flex-col">
-            <label htmlFor="company" className="mb-2 font-medium text-gray-700">
+            <label htmlFor="companyName" className="mb-2 font-medium text-gray-700">
               Company Name
             </label>
             <input
               type="text"
-              id="company"
+              id="companyName"
               placeholder="Company Name"
-              value={formData.company}
+              value={formData.companyName}
               onChange={handleInputChange}
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
               required
@@ -122,31 +176,31 @@ function BookSiteVisitCommercial() {
           </div>
         </div>
 
-        {/* Row 2: Email & Phone */}
+        {/* Email & Phone */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
-            <label htmlFor="email" className="mb-2 font-medium text-gray-700">
-              Email
+            <label htmlFor="companyEmail" className="mb-2 font-medium text-gray-700">
+              Company Email
             </label>
             <input
               type="email"
-              id="email"
-              placeholder="Email"
-              value={formData.email}
+              id="companyEmail"
+              placeholder="email@company.com"
+              value={formData.companyEmail}
               onChange={handleInputChange}
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
               required
             />
           </div>
           <div className="flex-1 flex flex-col">
-            <label htmlFor="phone" className="mb-2 font-medium text-gray-700">
-              Phone Number
+            <label htmlFor="companyPhone" className="mb-2 font-medium text-gray-700">
+              Company Phone Number
             </label>
             <input
               type="tel"
-              id="phone"
-              placeholder="Phone Number"
-              value={formData.phone}
+              id="companyPhone"
+              placeholder="(555) 555-5555"
+              value={formData.companyPhone}
               onChange={handleInputChange}
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
               required
@@ -154,24 +208,82 @@ function BookSiteVisitCommercial() {
           </div>
         </div>
 
-        {/* Row 3: Business Address */}
-        <div className="flex flex-col">
-          <label htmlFor="address" className="mb-2 font-medium text-gray-700">
-            Business Address
-          </label>
-          <input
-            type="text"
-            id="address"
-            placeholder="Business Address"
-            value={formData.address}
-            onChange={handleInputChange}
-            className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
-            required
-          />
+        {/* Address & Building Size */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 flex flex-col">
+            <label htmlFor="companyAddress" className="mb-2 font-medium text-gray-700">
+              Company Address
+            </label>
+            <input
+              type="text"
+              id="companyAddress"
+              placeholder="Street, City, State"
+              value={formData.companyAddress}
+              onChange={handleInputChange}
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              required
+            />
+          </div>
+          <div className="flex-1 flex flex-col">
+            <label htmlFor="squareFoot" className="mb-2 font-medium text-gray-700">
+              Building Size (sq ft)
+            </label>
+            <input
+              type="number"
+              min="1"
+              id="squareFoot"
+              placeholder="e.g. 5000"
+              value={formData.squareFoot}
+              onChange={handleInputChange}
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              required
+            />
+          </div>
         </div>
 
-        {/* Row 4: Preferred Date & Time */}
+        {/* Cleaning Services */}
+        <div className="flex flex-col">
+          <p className="mb-2 font-medium text-gray-700">Type of Cleaning Services</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {cleaningServiceOptions.map((option) => (
+              <label
+                key={option.value}
+                className="flex items-center gap-3 border border-gray-200 rounded-lg px-3 py-2 hover:border-[#C85344] transition"
+              >
+                <input
+                  type="checkbox"
+                  checked={formData.cleaningServices.includes(option.value)}
+                  onChange={() => handleServiceToggle(option.value)}
+                  className="h-4 w-4 text-[#C85344] focus:ring-[#C85344]"
+                />
+                <span className="text-gray-800">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Frequency & Schedule */}
         <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 flex flex-col">
+            <label htmlFor="cleaningFrequency" className="mb-2 font-medium text-gray-700">
+              Cleaning Frequency
+            </label>
+            <select
+              id="cleaningFrequency"
+              value={formData.cleaningFrequency}
+              onChange={handleInputChange}
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              required
+            >
+              <option value="">Select frequency</option>
+              {frequencyOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex-1 flex flex-col">
             <label htmlFor="preferredDate" className="mb-2 font-medium text-gray-700">
               Preferred Date
@@ -185,6 +297,7 @@ function BookSiteVisitCommercial() {
               required
             />
           </div>
+
           <div className="flex-1 flex flex-col">
             <label htmlFor="preferredTime" className="mb-2 font-medium text-gray-700">
               Preferred Time
@@ -200,15 +313,15 @@ function BookSiteVisitCommercial() {
           </div>
         </div>
 
-        {/* Row 5: Special Request */}
+        {/* Special Request */}
         <div className="flex flex-col">
           <label htmlFor="specialRequest" className="mb-2 font-medium text-gray-700">
-            Special Request
+            Special Request (optional)
           </label>
           <textarea
             id="specialRequest"
-            rows="5"
-            placeholder="Write your request here..."
+            rows="4"
+            placeholder="Share any access instructions or notes..."
             value={formData.specialRequest}
             onChange={handleInputChange}
             className="p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#C85344]"
@@ -221,7 +334,7 @@ function BookSiteVisitCommercial() {
           disabled={isSubmitting}
           className="w-full bg-[#C85344] text-white p-4 rounded-lg hover:bg-[#b84335] transition font-medium text-lg disabled:opacity-60"
         >
-          {isSubmitting ? "Submitting..." : "Book a visit"}
+          {isSubmitting ? "Submitting..." : "Submit info."}
         </button>
       </form>
 
