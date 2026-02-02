@@ -7,14 +7,17 @@ function BookSiteVisitPostConstraction() {
   const { user } = useAuthStore();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
+    name: user?.fullName || user?.name || "",
     company: "",
     email: "",
     phone: "",
     address: "",
     preferredDate: "",
     preferredTime: "",
-    specialRequest: ""
+    specialRequest: "",
+    squareFoot: "",
+    gcName: "",
+    gcPhone: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +33,20 @@ function BookSiteVisitPostConstraction() {
       if (Number.isNaN(d.getTime())) return "";
       return d.toISOString().slice(0, 10); // YYYY-MM-DD
     };
+    const to24Hour = (value) => {
+      if (!value) return "";
+      const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      if (!match) return "";
+      let [_, hh, mm, meridiem] = match;
+      let hour = parseInt(hh, 10);
+      if (hour === 12) {
+        hour = meridiem.toUpperCase() === "AM" ? 0 : 12;
+      } else if (meridiem.toUpperCase() === "PM") {
+        hour += 12;
+      }
+      const hourStr = hour.toString().padStart(2, "0");
+      return `${hourStr}:${mm}`;
+    };
     const payload = {
       serviceType: "post_construction",
       name: formData.name.trim(),
@@ -38,8 +55,11 @@ function BookSiteVisitPostConstraction() {
       phoneNumber: formData.phone.trim(),
       businessAddress: formData.address.trim(),
       preferredDate: normalizeDate(formData.preferredDate),
-      preferredTime: formData.preferredTime.trim(),
+      preferredTime: to24Hour(formData.preferredTime),
       specialRequest: formData.specialRequest.trim(),
+      squareFoot: Number(formData.squareFoot) || undefined,
+      generalContractorName: formData.gcName.trim(),
+      generalContractorPhone: formData.gcPhone.trim(),
     };
 
     if (
@@ -50,7 +70,10 @@ function BookSiteVisitPostConstraction() {
       !payload.businessAddress ||
       !payload.preferredDate ||
       !payload.preferredTime ||
-      !payload.specialRequest
+      !payload.specialRequest ||
+      !payload.squareFoot ||
+      !payload.generalContractorName ||
+      !payload.generalContractorPhone
     ) {
       setError("All fields are required. Please complete the form.");
       setIsSubmitting(false);
@@ -64,14 +87,17 @@ function BookSiteVisitPostConstraction() {
       .then(() => {
         setShowSuccessModal(true);
         setFormData({
-          name: "",
+          name: user?.fullName || user?.name || "",
           company: "",
           email: "",
           phone: "",
           address: "",
           preferredDate: "",
           preferredTime: "",
-          specialRequest: ""
+          specialRequest: "",
+          squareFoot: "",
+          gcName: "",
+          gcPhone: "",
         });
       })
       .catch((err) => {
@@ -192,6 +218,55 @@ function BookSiteVisitPostConstraction() {
           />
         </div>
 
+        {/* Row 3b: Site details */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 flex flex-col">
+            <label htmlFor="squareFoot" className="mb-2 font-medium text-gray-700">
+              Total Square Footage (sq ft)
+            </label>
+            <input
+              type="number"
+              min="1"
+              id="squareFoot"
+              value={formData.squareFoot}
+              onChange={handleInputChange}
+              placeholder="e.g. 8000"
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+            />
+          </div>
+          <div className="flex-1 flex flex-col">
+            <label htmlFor="gcName" className="mb-2 font-medium text-gray-700">
+              General Contractor Name
+            </label>
+            <input
+              type="text"
+              id="gcName"
+              value={formData.gcName}
+              onChange={handleInputChange}
+              placeholder="Contractor full name"
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+            />
+          </div>
+        </div>
+
+        {/* Row 3c: Contractor contact */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 flex flex-col">
+            <label htmlFor="gcPhone" className="mb-2 font-medium text-gray-700">
+              General Contractor Contact Number
+            </label>
+            <input
+              type="tel"
+              id="gcPhone"
+              value={formData.gcPhone}
+              onChange={handleInputChange}
+              placeholder="(555) 123-4567"
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+            />
+          </div>
+          <div className="flex-1" />
+        </div>
+
         {/* Row 4: Preferred Date & Time */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
@@ -217,10 +292,12 @@ function BookSiteVisitPostConstraction() {
               Preferred Time
             </label>
             <input
-              type="time"
+              type="text"
               id="preferredTime"
               value={formData.preferredTime}
               onChange={handleInputChange}
+              placeholder="hh:mm AM/PM"
+              pattern="^(0?[1-9]|1[0-2]):[0-5][0-9]\\s?(AM|PM)$"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
           </div>
