@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import superflyLogo from "../../assets/superfly-logo.svg";
 import { authApi } from "../../services/authApi";
 
 function Register() {
@@ -62,7 +63,7 @@ function Register() {
     <div className="min-h-screen bg-gradient-to-br from-[#fff7f2] via-white to-[#f0f4ff] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-xl">
         <div className="flex justify-center mb-4">
-          <img src="/logo.png" alt="Superfly Logo" className="w-24 h-24 drop-shadow-sm" />
+          <img src={superflyLogo} alt="Superfly Logo" className="w-24 h-24 drop-shadow-sm" />
         </div>
         <h2 className="text-center text-3xl font-extrabold text-gray-900 tracking-tight">
           Create your Superfly account

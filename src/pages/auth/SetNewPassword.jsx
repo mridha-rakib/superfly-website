@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowLeft02Icon } from "@hugeicons/core-free-icons";
+import superflyLogo from "../../assets/superfly-logo.svg";
 import { authApi } from "../../services/authApi";
 
 const SetNewPassword = () => {
@@ -68,7 +69,7 @@ const SetNewPassword = () => {
           {/* Header */}
           <div className="mb-8">
             <div className="flex justify-center mb-6">
-              <img src="logo.png" alt="Superfly Logo" className="w-24 h-24" />
+              <img src={superflyLogo} alt="Superfly Logo" className="w-24 h-24" />
             </div>
             <h2 className="text-2xl font-semibold text-gray-800 mb-2 text-center">
               Set New Password

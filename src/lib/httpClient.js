@@ -59,11 +59,17 @@ httpClient.interceptors.response.use(
   async (error) => {
     const status = error?.response?.status;
     const originalRequest = error.config || {};
+    const activeAccessToken = getAccessToken?.();
+    const requestHadAuthHeader = Boolean(
+      originalRequest?.headers?.Authorization ||
+      originalRequest?.headers?.authorization
+    );
 
     const shouldRefresh =
       status === 401 &&
       !originalRequest._retry &&
       !isAuthRoute(originalRequest) &&
+      (Boolean(activeAccessToken) || requestHadAuthHeader) &&
       typeof refreshAccessToken === "function";
 
     if (!shouldRefresh) {
@@ -116,4 +122,3 @@ export const configureHttpClient = ({
   refreshAccessToken = refreshAccessTokenFn;
   onUnauthorizedLogout = onLogout;
 };
-

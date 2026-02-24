@@ -5,6 +5,7 @@ import {
   Location10Icon,
   Mail01Icon,
 } from "@hugeicons/core-free-icons";
+import superflyLogo from "../../assets/superfly-logo.svg";
 
 function Footer() {
   return (
@@ -14,7 +15,7 @@ function Footer() {
 
         {/* Logo + About */}
         <div className="flex flex-col">
-          <img src="/logo.png" alt="Logo" className="w-20 mb-2" />
+          <img src={superflyLogo} alt="Superfly Logo" className="w-20 mb-2" />
 
           <h1 className="font-bold text-xl">Superfly Services</h1>
 

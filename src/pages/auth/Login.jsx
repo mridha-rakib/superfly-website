@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import superflyLogo from "../../assets/superfly-logo.svg";
 import { useAuthStore } from "../../state/useAuthStore";
 
 function Login() {
@@ -55,7 +56,7 @@ function Login() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo Section */}
         <div className="flex justify-center mb-8">
-          <img src="/logo.png" alt="Superfly Logo" className="w-40 h-40" />
+          <img src={superflyLogo} alt="Superfly Logo" className="w-40 h-40" />
         </div>
 
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">

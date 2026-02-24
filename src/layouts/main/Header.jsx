@@ -8,6 +8,7 @@ import {
   Menu01Icon,
   MultiplicationSignIcon,
 } from "@hugeicons/core-free-icons";
+import superflyLogo from "../../assets/superfly-logo.svg";
 import { useAuthStore } from "../../state/useAuthStore";
 
 function Header() {
@@ -105,15 +106,16 @@ function Header() {
   }, [showServices]);
 
   return (
-    <nav className="w-full bg-white shadow-lg sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex h-[74px] items-center justify-between">
           {/* Left Section: Logo + Mobile Menu Button */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-600 hover:text-[#C85344] transition-colors"
+              className="lg:hidden rounded-xl bg-white p-2 text-gray-600 transition hover:text-[#C85344]"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
               <HugeiconsIcon
                 icon={mobileMenuOpen ? MultiplicationSignIcon : Menu01Icon}
@@ -125,18 +127,28 @@ function Header() {
             <Link 
               to="/" 
               onClick={() => setActiveTab("Home")}
-              className="flex items-center"
+              className="group flex items-center gap-3 rounded-2xl bg-white/80 px-2 py-1.5 transition"
             >
-              <img 
-                src="/logo.png" 
-                alt="Logo" 
-                className="h-8 w-auto sm:h-10" 
-              />
+              <div className="h-10 w-10 sm:h-11 sm:w-11 overflow-hidden rounded-xl bg-gradient-to-br from-[#111827] via-[#1f2937] to-[#000000]">
+                <img
+                  src={superflyLogo}
+                  alt="Superfly Logo"
+                  className="h-full w-full object-cover object-center scale-[1.05]"
+                />
+              </div>
+              <div className="hidden sm:block leading-tight">
+                <p className="text-sm font-semibold tracking-tight text-gray-900">
+                  Superfly
+                </p>
+                <p className="text-[11px] text-gray-500 group-hover:text-gray-600 transition-colors">
+                  Cleaning Services
+                </p>
+              </div>
             </Link>
           </div>
 
           {/* Desktop Navigation - Center */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-8">
+          <div className="hidden lg:flex lg:items-center lg:gap-2 rounded-2xl bg-white/80 p-1">
             {getNavItems().map((item, index) => {
               if (item.dropdown) {
                 return (
@@ -146,10 +158,10 @@ function Header() {
                         e.stopPropagation();
                         handleDropdownClick(e);
                       }}
-                      className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      className={`flex items-center space-x-1 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
                         activeTab === item.name 
-                          ? "text-[#C85344] bg-red-50" 
-                          : "text-gray-700 hover:text-[#C85344] hover:bg-gray-50"
+                          ? "bg-[#C85344]/10 text-[#C85344]"
+                          : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                       }`}
                     >
                       <span>{item.name}</span>
@@ -160,16 +172,16 @@ function Header() {
                     </button>
 
                     {showServices && (
-                      <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                      <div className="absolute top-full left-0 mt-2 w-60 rounded-2xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur z-50">
                         <div className="py-1">
                           {item.dropdown.map((subItem, idx) => (
                             <button
                               key={idx}
                               onClick={() => handleSelect(subItem)}
-                              className={`block w-full text-left px-4 py-2 text-sm transition-colors ${
+                              className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
                                 activeTab === subItem.name
                                   ? "bg-[#C85344] text-white"
-                                  : "text-gray-700 hover:bg-[#C85344] hover:text-white"
+                                  : "text-gray-700 hover:bg-[#fff1ee] hover:text-[#C85344]"
                               }`}
                             >
                               {subItem.name}
@@ -187,10 +199,10 @@ function Header() {
                   key={index}
                   to={item.link}
                   onClick={() => handleNavClick(item)}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
                     activeTab === item.name
-                      ? "text-[#C85344] bg-red-50"
-                      : "text-gray-700 hover:text-[#C85344] hover:bg-gray-50"
+                      ? "bg-[#C85344]/10 text-[#C85344]"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                   }`}
                 >
                   {item.name}
@@ -200,10 +212,10 @@ function Header() {
           </div>
 
           {/* Right Section: Notification + Login/User Profile */}
-          <div className="flex items-center space-x-4">
-            {/* Notification Icon - Always visible on mobile and desktop */}
-            {!isAuthenticated && (
-              <button className="p-2 text-gray-600 hover:text-[#C85344] transition-colors">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Notification Icon - Only for registered clients */}
+            {isAuthenticated && role === "client" && (
+              <button className="rounded-xl bg-white p-2 text-gray-600 transition hover:text-[#C85344]">
                 <HugeiconsIcon icon={Notification01FreeIcons} className="w-5 h-5" />
               </button>
             )}
@@ -213,7 +225,7 @@ function Header() {
               {!isAuthenticated ? (
                 <button
                   onClick={handleLoginClick}
-                  className="px-4 py-2 bg-[#C85344] text-white rounded-md text-sm font-medium hover:bg-[#b54538] transition-colors"
+                  className="rounded-xl bg-[#C85344] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#b54538]"
                 >
                   Login
                 </button>
@@ -227,7 +239,7 @@ function Header() {
               <div className="lg:hidden flex items-center space-x-2">
                 <button
                   onClick={handleLoginClick}
-                  className="px-3 py-1.5 bg-[#C85344] text-white rounded-md text-sm font-medium hover:bg-[#b54538] transition-colors"
+                  className="rounded-xl bg-[#C85344] px-3 py-1.5 text-sm font-medium text-white transition hover:bg-[#b54538]"
                 >
                   Login
                 </button>
@@ -245,18 +257,18 @@ function Header() {
 
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-white border-t border-gray-200 shadow-lg absolute top-16 left-0 right-0">
-            <div className="px-2 pt-2 pb-3 space-y-1">
+          <div className="absolute left-4 right-4 top-[calc(100%+10px)] z-50 rounded-2xl bg-white/95 backdrop-blur lg:hidden">
+            <div className="space-y-1 p-3">
               {getNavItems().map((item, index) => {
                 if (item.dropdown) {
                   return (
                     <div key={index} className="space-y-1">
                       <button
                         onClick={handleDropdownClick}
-                        className={`flex justify-between items-center w-full px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-base font-medium transition-colors ${
                           activeTab === item.name
-                            ? "text-[#C85344] bg-red-50"
-                            : "text-gray-700 hover:text-[#C85344] hover:bg-gray-50"
+                            ? "bg-[#C85344]/10 text-[#C85344]"
+                            : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                         }`}
                       >
                         <span>{item.name}</span>
@@ -272,10 +284,10 @@ function Header() {
                             <button
                               key={idx}
                               onClick={() => handleSelect(subItem)}
-                              className={`block w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                              className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition-colors ${
                                 activeTab === subItem.name
                                   ? "bg-[#C85344] text-white"
-                                  : "text-gray-700 hover:bg-[#C85344] hover:text-white"
+                                  : "text-gray-700 hover:bg-[#fff1ee] hover:text-[#C85344]"
                               }`}
                             >
                               {subItem.name}
@@ -291,10 +303,10 @@ function Header() {
                   <button
                     key={index}
                     onClick={() => handleNavClick(item)}
-                    className={`block w-full text-left px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                    className={`block w-full rounded-xl px-3 py-2 text-left text-base font-medium transition-colors ${
                       activeTab === item.name
-                        ? "text-[#C85344] bg-red-50"
-                        : "text-gray-700 hover:text-[#C85344] hover:bg-gray-50"
+                        ? "bg-[#C85344]/10 text-[#C85344]"
+                        : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                     }`}
                   >
                     {item.name}
