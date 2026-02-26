@@ -80,7 +80,7 @@ export const useAuthStore = create(
         if (accessToken) {
           set({
             accessToken,
-            isAuthenticated: Boolean(get().user || accessToken),
+            isAuthenticated: true,
           });
         }
         return accessToken;
@@ -92,13 +92,13 @@ export const useAuthStore = create(
         set({
           user,
           role: user?.role || null,
-          isAuthenticated: Boolean(user),
+          isAuthenticated: Boolean(user && get().accessToken),
         });
         return user;
       },
 
       bootstrap: async () => {
-        const { accessToken, user, isHydrating } = get();
+        const { accessToken, isHydrating } = get();
         if (isHydrating) return;
         if (!accessToken) {
           set({ ...initialState });
@@ -106,14 +106,7 @@ export const useAuthStore = create(
         }
         set({ isHydrating: true });
         try {
-          if (!user) {
-            await get().fetchProfile();
-          } else {
-            set({
-              isAuthenticated: true,
-              role: user?.role || null,
-            });
-          }
+          await get().fetchProfile();
         } catch (error) {
           set({ ...initialState });
         } finally {
@@ -125,7 +118,7 @@ export const useAuthStore = create(
         set({
           user: normalizeUser(user),
           role: user?.role || null,
-          isAuthenticated: Boolean(user),
+          isAuthenticated: Boolean(user && get().accessToken),
         }),
 
       clearError: () => set({ error: null }),
@@ -139,7 +132,7 @@ export const useAuthStore = create(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        const isAuthed = Boolean(state.accessToken || state.user);
+        const isAuthed = Boolean(state.accessToken);
         state.isAuthenticated = isAuthed;
       },
     }

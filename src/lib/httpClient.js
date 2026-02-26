@@ -45,6 +45,25 @@ const isAuthRoute = (request) => {
   );
 };
 
+const getErrorMessage = (error) => {
+  const message =
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    "";
+  return String(message).toLowerCase();
+};
+
+const isInvalidAccessTokenError = (error) => {
+  const message = getErrorMessage(error);
+  return (
+    message.includes("invalid or expired access token") ||
+    message.includes("jwt expired") ||
+    (message.includes("access token") && message.includes("expired")) ||
+    (message.includes("access token") && message.includes("invalid"))
+  );
+};
+
 httpClient.interceptors.request.use((config) => {
   if (!config.headers) config.headers = {};
   const token = getAccessToken?.();
@@ -60,19 +79,23 @@ httpClient.interceptors.response.use(
     const status = error?.response?.status;
     const originalRequest = error.config || {};
     const activeAccessToken = getAccessToken?.();
+    const invalidAccessToken = isInvalidAccessTokenError(error);
     const requestHadAuthHeader = Boolean(
       originalRequest?.headers?.Authorization ||
       originalRequest?.headers?.authorization
     );
 
     const shouldRefresh =
-      status === 401 &&
       !originalRequest._retry &&
       !isAuthRoute(originalRequest) &&
       (Boolean(activeAccessToken) || requestHadAuthHeader) &&
+      (status === 401 || invalidAccessToken) &&
       typeof refreshAccessToken === "function";
 
     if (!shouldRefresh) {
+      if (invalidAccessToken && !isAuthRoute(originalRequest)) {
+        onUnauthorizedLogout?.();
+      }
       return Promise.reject(error);
     }
 
@@ -81,10 +104,12 @@ httpClient.interceptors.response.use(
         refreshQueue.push({ resolve, reject });
       })
         .then((token) => {
-          if (token) {
-            originalRequest.headers = originalRequest.headers || {};
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+          if (!token) {
+            onUnauthorizedLogout?.();
+            return Promise.reject(error);
           }
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${token}`;
           return httpClient(originalRequest);
         })
         .catch((queueError) => Promise.reject(queueError));
@@ -102,6 +127,7 @@ httpClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return httpClient(originalRequest);
       }
+      onUnauthorizedLogout?.();
       return Promise.reject(error);
     } catch (refreshError) {
       flushQueue(refreshError, null);

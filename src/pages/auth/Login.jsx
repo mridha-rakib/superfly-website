@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import superflyLogo from "../../assets/superfly-logo.svg";
 import { useAuthStore } from "../../state/useAuthStore";
 
 function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading, authError, clearError } = useAuthStore(
     (state) => ({
       login: state.login,
@@ -19,6 +20,22 @@ function Login() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    clearError();
+    setError("");
+
+    const emailFromState = location.state?.email;
+    const emailVerified = location.state?.emailVerified;
+
+    if (emailFromState) {
+      setFormData((prev) => ({ ...prev, email: emailFromState }));
+    }
+    if (emailVerified) {
+      setSuccess("Email verified successfully. Please login.");
+    }
+  }, [clearError, location.state]);
 
   useEffect(() => {
     setError(authError || "");
@@ -74,6 +91,11 @@ function Login() {
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
                 {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                {success}
               </div>
             )}
 
