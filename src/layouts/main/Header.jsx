@@ -106,7 +106,7 @@ function Header() {
   }, [showServices]);
 
   return (
-    <nav className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur">
+    <nav className="navbar-shell sticky top-0 z-50 w-full bg-white/90 backdrop-blur">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-[74px] items-center justify-between">
           {/* Left Section: Logo + Mobile Menu Button */}
@@ -124,20 +124,20 @@ function Header() {
             </button>
 
             {/* Logo */}
-            <Link 
-              to="/" 
+            <Link
+              to="/"
               onClick={() => setActiveTab("Home")}
-              className="group flex items-center gap-3 rounded-2xl bg-white/80 px-2 py-1.5 transition"
+              className="logo-highlight group relative flex items-center gap-3 rounded-2xl bg-white/80 px-2.5 py-1.5 transition-all duration-300 hover:-translate-y-0.5"
             >
-              <div className="h-10 w-10 sm:h-11 sm:w-11 overflow-hidden rounded-xl bg-gradient-to-br from-[#111827] via-[#1f2937] to-[#000000]">
+              <div className="h-11 w-11 sm:h-12 sm:w-12 overflow-hidden rounded-xl bg-white p-[2px]">
                 <img
                   src={superflyLogo}
                   alt="Superfly Logo"
-                  className="h-full w-full object-cover object-center scale-[1.05]"
+                  className="h-full w-full rounded-[10px] object-cover object-center scale-[1.07] transition-transform duration-300 group-hover:scale-110"
                 />
               </div>
               <div className="hidden sm:block leading-tight">
-                <p className="text-sm font-semibold tracking-tight text-gray-900">
+                <p className="text-sm font-semibold tracking-tight text-gray-900 transition-colors duration-300 group-hover:text-[#a6382a]">
                   Superfly
                 </p>
                 <p className="text-[11px] text-gray-500 group-hover:text-gray-600 transition-colors">
@@ -148,7 +148,7 @@ function Header() {
           </div>
 
           {/* Desktop Navigation - Center */}
-          <div className="hidden lg:flex lg:items-center lg:gap-2 rounded-2xl bg-white/80 p-1">
+          <div className="navbar-track hidden lg:flex lg:items-center lg:gap-2 rounded-2xl bg-white/85 p-1.5">
             {getNavItems().map((item, index) => {
               if (item.dropdown) {
                 return (
@@ -158,21 +158,21 @@ function Header() {
                         e.stopPropagation();
                         handleDropdownClick(e);
                       }}
-                      className={`flex items-center space-x-1 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-                        activeTab === item.name 
-                          ? "bg-[#C85344]/10 text-[#C85344]"
+                      className={`nav-pill flex items-center space-x-1 rounded-xl px-4 py-2 text-sm font-medium ${
+                        activeTab === item.name
+                          ? "nav-pill-active bg-[#C85344]/10 text-[#C85344]"
                           : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                       }`}
                     >
                       <span>{item.name}</span>
                       <HugeiconsIcon
                         icon={showServices ? ArrowUp01Icon : ArrowDown01Icon}
-                        className="w-4 h-4"
+                        className={`w-4 h-4 transition-transform duration-200 ${showServices ? "rotate-180" : ""}`}
                       />
                     </button>
 
                     {showServices && (
-                      <div className="absolute top-full left-0 mt-2 w-60 rounded-2xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur z-50">
+                      <div className="nav-dropdown-panel absolute top-full left-0 mt-2 w-60 rounded-2xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur z-50">
                         <div className="py-1">
                           {item.dropdown.map((subItem, idx) => (
                             <button
@@ -199,9 +199,9 @@ function Header() {
                   key={index}
                   to={item.link}
                   onClick={() => handleNavClick(item)}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+                  className={`nav-pill rounded-xl px-4 py-2 text-sm font-medium ${
                     activeTab === item.name
-                      ? "bg-[#C85344]/10 text-[#C85344]"
+                      ? "nav-pill-active bg-[#C85344]/10 text-[#C85344]"
                       : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                   }`}
                 >
@@ -257,7 +257,7 @@ function Header() {
 
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
-          <div className="absolute left-4 right-4 top-[calc(100%+10px)] z-50 rounded-2xl bg-white/95 backdrop-blur lg:hidden">
+          <div className="mobile-nav-panel absolute left-4 right-4 top-[calc(100%+10px)] z-50 rounded-2xl bg-white/95 backdrop-blur lg:hidden">
             <div className="space-y-1 p-3">
               {getNavItems().map((item, index) => {
                 if (item.dropdown) {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import superflyLogo from "../../assets/superfly-logo.svg";
+import superflyLogo from "../../assets/superfly-logo-transparent.png";
 import { useAuthStore } from "../../state/useAuthStore";
 
 function Login() {
@@ -69,11 +69,24 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+    <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-[#f8f7f7] py-12 sm:px-6 lg:px-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -left-20 -top-24 h-64 w-64 rounded-full bg-[#f8dfda] opacity-80 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-24 -right-20 h-72 w-72 rounded-full bg-[#f5e7e4] opacity-90 blur-3xl"
+      />
+
+      <div className="relative sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo Section */}
-        <div className="flex justify-center mb-8">
-          <img src={superflyLogo} alt="Superfly Logo" className="w-40 h-40" />
+        <div className="mb-8 flex justify-center">
+          <img
+            src={superflyLogo}
+            alt="Superfly Logo"
+            className="h-40 w-40 object-contain drop-shadow-[0_14px_30px_rgba(200,83,68,0.18)]"
+          />
         </div>
 
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -84,8 +97,8 @@ function Login() {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="relative mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="rounded-2xl bg-white/92 px-4 py-8 shadow-[0_20px_50px_rgba(15,23,42,0.10)] backdrop-blur sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Error Message */}
             {error && (
@@ -115,7 +128,7 @@ function Login() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-[#FFD1E8] focus:border-[#FFD1E8] sm:text-sm"
+                  className="block w-full rounded-xl border border-[#e5d8d5] bg-white px-3.5 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition focus:border-[#C85344] focus:ring-4 focus:ring-[#C85344]/10"
                   placeholder="Enter your email"
                   disabled={isLoading}
                 />
@@ -138,7 +151,7 @@ function Login() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-[#FFD1E8] focus:border-[#FFD1E8] sm:text-sm"
+                  className="block w-full rounded-xl border border-[#e5d8d5] bg-white px-3.5 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none transition focus:border-[#C85344] focus:ring-4 focus:ring-[#C85344]/10"
                   placeholder="Enter your password"
                   disabled={isLoading}
                 />
@@ -149,7 +162,7 @@ function Login() {
               <div className="text-sm ml-auto">
                 <a
                   href="/forgot-password"
-                  className="font-medium text-blue-500 hover:text-blue-600"
+                  className="font-medium text-[#C85344] transition-colors hover:text-[#b54538]"
                 >
                   Forgot your password?
                 </a>
@@ -160,7 +173,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 px-4 rounded-lg border bg-[#C85344] border-[#C85344] flex items-center justify-center gap-2 cursor-pointer text-white hover:bg-[#C85344] transition-colors disabled:opacity-50"
+                className="group flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#C85344] px-4 text-white transition-all hover:-translate-y-0.5 hover:bg-[#b54538] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <span className="font-medium">Login</span>
               </button>
@@ -170,7 +183,7 @@ function Login() {
             Don't have an account?{" "}
             <a
               onClick={() => navigate("/register")}
-              className="font-medium text-blue-500 hover:text-blue-600 cursor-pointer"
+              className="cursor-pointer font-medium text-[#C85344] transition-colors hover:text-[#b54538]"
             >
               Register
             </a>

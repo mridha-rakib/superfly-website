@@ -15,7 +15,11 @@ function Footer() {
 
         {/* Logo + About */}
         <div className="flex flex-col">
-          <img src={superflyLogo} alt="Superfly Logo" className="w-20 mb-2" />
+          <img
+            src={superflyLogo}
+            alt="Superfly Logo"
+            className="w-20 mb-2 mix-blend-multiply contrast-110"
+          />
 
           <h1 className="font-bold text-xl">Superfly Services</h1>
 
