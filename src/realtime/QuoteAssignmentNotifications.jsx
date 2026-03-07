@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import { useAuthStore } from "../state/useAuthStore";
+import { useRealtimeNotificationStore } from "../state/useRealtimeNotificationStore";
 
 const SUPPORTED_ROLES = new Set(["client", "cleaner"]);
 
@@ -26,9 +27,21 @@ const QuoteAssignmentNotifications = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const role = useAuthStore((state) => state.role);
+  const addNotification = useRealtimeNotificationStore(
+    (state) => state.addNotification
+  );
+  const clearNotifications = useRealtimeNotificationStore(
+    (state) => state.clearNotifications
+  );
 
   useEffect(() => {
-    if (!isAuthenticated || !accessToken || !SUPPORTED_ROLES.has(role || "")) {
+    if (!isAuthenticated || !accessToken) {
+      clearNotifications();
+      return undefined;
+    }
+
+    const normalizedRole = (role || "").toLowerCase();
+    if (!SUPPORTED_ROLES.has(normalizedRole)) {
       return undefined;
     }
 
@@ -47,11 +60,13 @@ const QuoteAssignmentNotifications = () => {
 
       const toastId = [
         "quote-assignment",
-        payload.recipientType || role || "user",
+        payload.recipientType || normalizedRole || "user",
         payload.quoteId || "unknown",
         payload.assignmentType || "updated",
         payload.createdAt || Date.now(),
       ].join(":");
+
+      addNotification("quote:assignment", payload);
 
       toast.info(message, {
         toastId,
@@ -66,11 +81,13 @@ const QuoteAssignmentNotifications = () => {
 
       const toastId = [
         "quote-status",
-        payload.recipientType || role || "user",
+        payload.recipientType || normalizedRole || "user",
         payload.quoteId || "unknown",
         payload.status || "updated",
         payload.createdAt || Date.now(),
       ].join(":");
+
+      addNotification("quote:status", payload);
 
       toast.info(message, {
         toastId,
@@ -85,7 +102,7 @@ const QuoteAssignmentNotifications = () => {
       socket.off("quote:status", onQuoteStatus);
       socket.disconnect();
     };
-  }, [accessToken, isAuthenticated, role]);
+  }, [accessToken, addNotification, clearNotifications, isAuthenticated, role]);
 
   return null;
 };

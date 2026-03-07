@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { authApi } from "../../services/authApi";
 import { userApi } from "../../services/userApi";
 import { useAuthStore } from "../../state/useAuthStore";
 
 function Profile() {
-  const authUser = useAuthStore((s) => s.user);
   const setUserInStore = useAuthStore((s) => s.setUser);
   const [user, setUser] = useState(null);
   const [tempUser, setTempUser] = useState(null);
@@ -14,6 +14,14 @@ function Profile() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   useEffect(() => {
     setIsLoading(true);
@@ -75,7 +83,7 @@ function Profile() {
           updated?.avatar ||
           tempUser.avatar,
       };
-      setUser(updated);
+      setUser(merged);
       setTempUser(merged);
       setUserInStore(merged);
       setIsEditing(false);
@@ -127,6 +135,56 @@ function Profile() {
     } finally {
       setIsUploading(false);
       e.target.value = "";
+    }
+  };
+
+  const handlePasswordFieldChange = (field, value) => {
+    setPasswordForm((prev) => ({ ...prev, [field]: value }));
+    setPasswordError("");
+    setPasswordSuccess("");
+  };
+
+  const handleChangePassword = async () => {
+    const { currentPassword, newPassword, confirmPassword } = passwordForm;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All password fields are required.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirm password do not match.");
+      return;
+    }
+    if (currentPassword === newPassword) {
+      setPasswordError("New password must be different from current password.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    setPasswordError("");
+    setPasswordSuccess("");
+    try {
+      const res = await authApi.changePassword({ currentPassword, newPassword });
+      const message =
+        res?.message ||
+        "Password changed successfully. Please login again with your new password.";
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordSuccess(message);
+    } catch (err) {
+      setPasswordError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Could not change password. Please try again."
+      );
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -275,6 +333,72 @@ function Profile() {
             </button>
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6 space-y-5">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#C85344]">Security</p>
+          <h2 className="text-xl font-semibold text-gray-900 mt-1">Change Password</h2>
+        </div>
+
+        {(passwordError || passwordSuccess) && (
+          <div
+            className={`px-4 py-3 rounded-lg text-sm ${
+              passwordError
+                ? "bg-red-50 border border-red-200 text-red-700"
+                : "bg-green-50 border border-green-200 text-green-700"
+            }`}
+          >
+            {passwordError || passwordSuccess}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="flex flex-col md:col-span-2">
+            <label className="text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <input
+              type="password"
+              value={passwordForm.currentPassword}
+              onChange={(e) => handlePasswordFieldChange("currentPassword", e.target.value)}
+              className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#C85344]/30"
+              autoComplete="current-password"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <input
+              type="password"
+              value={passwordForm.newPassword}
+              onChange={(e) => handlePasswordFieldChange("newPassword", e.target.value)}
+              className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#C85344]/30"
+              autoComplete="new-password"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700 mb-1">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={passwordForm.confirmPassword}
+              onChange={(e) => handlePasswordFieldChange("confirmPassword", e.target.value)}
+              className="p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#C85344]/30"
+              autoComplete="new-password"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={handleChangePassword}
+            disabled={isChangingPassword}
+            className="px-4 py-2 bg-[#C85344] text-white rounded-lg hover:bg-[#b84335] transition disabled:opacity-60"
+          >
+            {isChangingPassword ? "Updating..." : "Update Password"}
+          </button>
+        </div>
       </div>
     </div>
   );

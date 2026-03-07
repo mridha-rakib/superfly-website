@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -10,11 +10,14 @@ import {
 } from "@hugeicons/core-free-icons";
 import superflyLogo from "../../assets/superfly-logo.svg";
 import { useAuthStore } from "../../state/useAuthStore";
+import { useRealtimeNotificationStore } from "../../state/useRealtimeNotificationStore";
 
 function Header() {
   const [activeTab, setActiveTab] = useState("Home");
   const [showServices, setShowServices] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
 
   const navigate = useNavigate();
   const { user, role, isAuthenticated, logout } = useAuthStore((state) => ({
@@ -23,6 +26,17 @@ function Header() {
     isAuthenticated: state.isAuthenticated,
     logout: state.logout,
   }));
+  const notifications = useRealtimeNotificationStore((state) => state.notifications);
+  const markAsRead = useRealtimeNotificationStore((state) => state.markAsRead);
+  const markAllAsRead = useRealtimeNotificationStore((state) => state.markAllAsRead);
+  const normalizedRole = (role || "").toLowerCase();
+  const hasNotificationCenter =
+    isAuthenticated &&
+    (normalizedRole === "client" || normalizedRole === "cleaner");
+  const unreadCount = useMemo(
+    () => notifications.filter((item) => !item.isRead).length,
+    [notifications]
+  );
 
   const getNavItems = () => {
     if (!isAuthenticated) {
@@ -39,7 +53,7 @@ function Header() {
         { name: "Contact", link: "/contact" },
         { name: "Reviews", link: "/reviews" },
       ];
-    } else if (role === "client") {
+    } else if (normalizedRole === "client") {
       return [
         { name: "Home", link: "/" },
         {
@@ -54,7 +68,7 @@ function Header() {
         { name: "My Bookings", link: "/my-booking" },
         { name: "Reviews", link: "/reviews" },
       ];
-    } else if (role === "cleaner") {
+    } else if (normalizedRole === "cleaner") {
       return [
         { name: "My Jobs", link: "/my-jobs" },
         { name: "Earnings", link: "/earnings" },
@@ -90,9 +104,38 @@ function Header() {
 
   const handleLogout = async () => {
     setMobileMenuOpen(false);
+    setShowNotifications(false);
     await logout();
     setActiveTab("Home");
     navigate("/login");
+  };
+
+  const handleNotificationClick = (notification) => {
+    if (!notification) return;
+    markAsRead(notification.id);
+    setShowNotifications(false);
+    if (!notification.quoteId) return;
+
+    if (normalizedRole === "cleaner") {
+      navigate(`/my-jobs/${notification.quoteId}`);
+      return;
+    }
+
+    if (normalizedRole === "client") {
+      navigate(`/my-booking/${notification.quoteId}`);
+    }
+  };
+
+  const formatNotificationTime = (value) => {
+    if (!value) return "";
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
   };
 
   // Close dropdowns when clicking outside
@@ -104,6 +147,20 @@ function Header() {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [showServices]);
+
+  useEffect(() => {
+    if (!showNotifications) return undefined;
+    const onDocumentClick = (event) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocumentClick);
+    return () => document.removeEventListener("mousedown", onDocumentClick);
+  }, [showNotifications]);
 
   return (
     <nav className="navbar-shell sticky top-0 z-50 w-full bg-white/90 backdrop-blur">
@@ -213,11 +270,79 @@ function Header() {
 
           {/* Right Section: Notification + Login/User Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Notification Icon - Only for registered clients */}
-            {isAuthenticated && role === "client" && (
-              <button className="rounded-xl bg-white p-2 text-gray-600 transition hover:text-[#C85344]">
-                <HugeiconsIcon icon={Notification01FreeIcons} className="w-5 h-5" />
-              </button>
+            {hasNotificationCenter && (
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => setShowNotifications((prev) => !prev)}
+                  className="relative rounded-xl bg-white p-2 text-gray-600 transition hover:text-[#C85344]"
+                  aria-label="Open notifications"
+                >
+                  <HugeiconsIcon icon={Notification01FreeIcons} className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#C85344] px-1 text-[10px] font-semibold text-white">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-[330px] max-w-[92vw] rounded-2xl border border-gray-200 bg-white shadow-xl z-50">
+                    <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          Notifications
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {unreadCount} unread
+                        </p>
+                      </div>
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={markAllAsRead}
+                          className="text-xs font-semibold text-[#C85344] hover:text-[#b54538]"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-gray-500">
+                        No notifications yet.
+                      </div>
+                    ) : (
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.map((notification) => (
+                          <button
+                            key={notification.id}
+                            onClick={() => handleNotificationClick(notification)}
+                            className={`block w-full border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 ${
+                              notification.isRead ? "bg-white" : "bg-[#fff1ee]"
+                            }`}
+                          >
+                            <p className="text-sm font-semibold text-gray-900">
+                              {notification.title}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-600">
+                              {notification.message}
+                            </p>
+                            <div className="mt-1 flex items-center justify-between gap-2">
+                              <span className="text-[11px] text-gray-500">
+                                {notification.quoteId
+                                  ? `Booking #${notification.quoteId}`
+                                  : "System update"}
+                              </span>
+                              <span className="text-[11px] text-gray-400">
+                                {formatNotificationTime(notification.createdAt)}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Desktop Login Buttons / User Profile */}

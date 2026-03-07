@@ -1,8 +1,253 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { formatTimeFromDate, formatTimeTo12Hour } from "../../lib/time-utils";
 import { cleaningReportApi } from "../../services/cleaningReportApi";
 import { quoteApi } from "../../services/quoteApi";
+
+const WEEKDAY_TO_INDEX = {
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+  sunday: 0,
+};
+
+const DEFAULT_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+const startOfDay = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const addDays = (date, days) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return startOfDay(next);
+};
+
+const addMonths = (date, months) =>
+  new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const parseDateOnly = (value) => {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+  return parsed;
+};
+
+const toDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const normalizeMonths = (months) => {
+  const normalized = Array.from(
+    new Set(
+      (Array.isArray(months) ? months : [])
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value >= 1 && value <= 12)
+    )
+  ).sort((a, b) => a - b);
+  return normalized.length ? normalized : [...DEFAULT_MONTHS];
+};
+
+const maxDayForMonth = (monthValue) =>
+  new Date(2025, Number(monthValue), 0).getDate() || 31;
+
+const normalizeDatesForMonth = (dates, monthValue) => {
+  const maxDay = maxDayForMonth(monthValue);
+  return Array.from(
+    new Set(
+      (Array.isArray(dates) ? dates : [])
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value >= 1 && value <= maxDay)
+    )
+  ).sort((a, b) => a - b);
+};
+
+const resolveMonthlyDatesMap = (schedule) => {
+  const months = normalizeMonths(schedule.months);
+  const result = new Map();
+
+  if (Array.isArray(schedule.month_dates) && schedule.month_dates.length > 0) {
+    schedule.month_dates.forEach((entry) => {
+      const month = Number(entry?.month);
+      if (!months.includes(month)) return;
+      const dates = normalizeDatesForMonth(entry?.dates, month);
+      if (dates.length > 0) {
+        result.set(month, dates);
+      }
+    });
+  } else {
+    const fallbackDates = Array.from(
+      new Set(
+        (Array.isArray(schedule.dates) ? schedule.dates : [])
+          .map((value) => Number(value))
+          .filter((value) => Number.isInteger(value) && value >= 1 && value <= 31)
+      )
+    ).sort((a, b) => a - b);
+
+    months.forEach((month) => {
+      const dates = normalizeDatesForMonth(fallbackDates, month);
+      if (dates.length > 0) {
+        result.set(month, dates);
+      }
+    });
+  }
+
+  return result;
+};
+
+const getWeekdayPatternDayOfMonth = (year, month, week, day) => {
+  const targetWeekday = WEEKDAY_TO_INDEX[day];
+  if (targetWeekday === undefined) return null;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  if (week === "last") {
+    const lastWeekday = new Date(year, month, daysInMonth).getDay();
+    const delta = (lastWeekday - targetWeekday + 7) % 7;
+    return daysInMonth - delta;
+  }
+
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const offsetFromFirst = (targetWeekday - firstWeekday + 7) % 7;
+  const weekOffset =
+    week === "first"
+      ? 0
+      : week === "second"
+      ? 1
+      : week === "third"
+      ? 2
+      : week === "fourth"
+      ? 3
+      : null;
+
+  if (weekOffset === null) return null;
+  const dayOfMonth = 1 + offsetFromFirst + weekOffset * 7;
+  return dayOfMonth <= daysInMonth ? dayOfMonth : null;
+};
+
+const buildOccurrenceDateKeys = (job, monthsAhead = 18) => {
+  const schedule = job?.cleaningSchedule;
+  const startDate = parseDateOnly(job?.serviceDate);
+  if (!startDate) return [];
+
+  const serviceFloor = startOfDay(startDate);
+  const today = startOfDay(new Date());
+  const lookbackStart = addDays(today, -30);
+  const rangeStart = serviceFloor > lookbackStart ? serviceFloor : lookbackStart;
+  const rangeEnd = addMonths(today, monthsAhead);
+  const keys = [];
+  const add = (candidateDate) => {
+    if (!candidateDate) return;
+    const normalized = startOfDay(candidateDate);
+    if (normalized < serviceFloor) return;
+    if (normalized < rangeStart || normalized > rangeEnd) return;
+    keys.push(toDateKey(normalized));
+  };
+
+  if (!schedule || typeof schedule !== "object" || !schedule.frequency) {
+    add(startDate);
+  } else if (schedule.frequency === "one_time") {
+    add(parseDateOnly(schedule.schedule?.date || job?.serviceDate));
+  } else if (schedule.frequency === "weekly") {
+    const days = new Set(
+      (Array.isArray(schedule.days) ? schedule.days : [])
+        .map((day) => String(day || "").toLowerCase())
+        .filter(Boolean)
+    );
+    const repeatUntil = parseDateOnly(schedule.repeat_until);
+    const endLimit =
+      repeatUntil && repeatUntil < rangeEnd ? startOfDay(repeatUntil) : rangeEnd;
+    let cursor = rangeStart;
+    while (cursor <= endLimit) {
+      const weekday = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ][cursor.getDay()];
+      if (days.has(weekday)) {
+        add(cursor);
+      }
+      cursor = addDays(cursor, 1);
+    }
+  } else if (
+    schedule.frequency === "monthly" &&
+    schedule.pattern_type === "specific_dates"
+  ) {
+    const monthDatesMap = resolveMonthlyDatesMap(schedule);
+    let monthCursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    const monthEnd = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), 1);
+    while (monthCursor <= monthEnd) {
+      const year = monthCursor.getFullYear();
+      const month = monthCursor.getMonth();
+      const monthValue = month + 1;
+      const dates = monthDatesMap.get(monthValue) || [];
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      dates.forEach((day) => {
+        if (day <= daysInMonth) {
+          add(new Date(year, month, day));
+        }
+      });
+      monthCursor = addMonths(monthCursor, 1);
+    }
+  } else if (
+    schedule.frequency === "monthly" &&
+    schedule.pattern_type === "weekday_pattern"
+  ) {
+    const months = normalizeMonths(schedule.months);
+    const monthSet = new Set(months);
+    const week = String(schedule.week || "").toLowerCase();
+    const day = String(schedule.day || "").toLowerCase();
+    let monthCursor = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
+    const monthEnd = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), 1);
+    while (monthCursor <= monthEnd) {
+      const year = monthCursor.getFullYear();
+      const month = monthCursor.getMonth();
+      const monthValue = month + 1;
+      if (monthSet.has(monthValue)) {
+        const dayOfMonth = getWeekdayPatternDayOfMonth(year, month, week, day);
+        if (dayOfMonth) {
+          add(new Date(year, month, dayOfMonth));
+        }
+      }
+      monthCursor = addMonths(monthCursor, 1);
+    }
+  } else {
+    add(startDate);
+  }
+
+  return Array.from(new Set(keys)).sort((a, b) => (a > b ? 1 : -1));
+};
+
+const formatDateLabel = (dateKey) => {
+  const date = parseDateOnly(dateKey);
+  if (!date) return dateKey || "--";
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
 
 const statusChip = (key) => {
   switch (key) {
@@ -51,6 +296,7 @@ const formatReportTime = (value) => {
 function ViewJob() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [job, setJob] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -69,6 +315,7 @@ function ViewJob() {
   const [showApprovalCard, setShowApprovalCard] = useState(false);
   const [displayStatus, setDisplayStatus] = useState(null);
   const [hasArrived, setHasArrived] = useState(false);
+  const [selectedOccurrenceDate, setSelectedOccurrenceDate] = useState("");
 
   const deriveStatus = (job) => {
     if (job.cleanerStatus) return job.cleanerStatus;
@@ -119,6 +366,42 @@ function ViewJob() {
       active = false;
     };
   }, [id]);
+
+  const isManualService =
+    job?.serviceType === "commercial" || job?.serviceType === "post_construction";
+
+  const occurrenceDateKeys = useMemo(() => {
+    if (!job || !isManualService) {
+      return [];
+    }
+    return buildOccurrenceDateKeys(job);
+  }, [isManualService, job]);
+
+  const defaultOccurrenceDate = useMemo(() => {
+    if (!job) {
+      return "";
+    }
+
+    if (!isManualService) {
+      return job.serviceDate || "";
+    }
+
+    const fromQuery = searchParams.get("occurrenceDate");
+    if (fromQuery && occurrenceDateKeys.includes(fromQuery)) {
+      return fromQuery;
+    }
+
+    const todayKey = toDateKey(startOfDay(new Date()));
+    const nextUpcoming = occurrenceDateKeys.find((key) => key >= todayKey);
+    return nextUpcoming || occurrenceDateKeys[0] || job.serviceDate || "";
+  }, [isManualService, job, occurrenceDateKeys, searchParams]);
+
+  useEffect(() => {
+    if (!defaultOccurrenceDate) {
+      return;
+    }
+    setSelectedOccurrenceDate(defaultOccurrenceDate);
+  }, [defaultOccurrenceDate]);
 
   if (isLoading) {
     return (
@@ -187,9 +470,14 @@ function ViewJob() {
       setSubmitError("Arrival, start, and end time are required.");
       return;
     }
+    if (isManualService && !selectedOccurrenceDate) {
+      setSubmitError("Please choose which assigned date this report is for.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       const report = await cleaningReportApi.submit(job._id, {
+        occurrenceDate: isManualService ? selectedOccurrenceDate : undefined,
         arrivalTime: toIso(arrivalTime),
         startTime: toIso(startTime),
         endTime: toIso(endTime),
@@ -198,15 +486,29 @@ function ViewJob() {
         afterPhotos,
         statusOption,
       });
-      setSubmitSuccess("Report submitted successfully.");
+      const successMessage = isManualService
+        ? `Report submitted for ${formatDateLabel(
+            selectedOccurrenceDate || report?.occurrenceDate
+          )}.`
+        : "Report submitted successfully.";
+      setSubmitSuccess(successMessage);
       setShowApprovalCard(true);
-      setDisplayStatus({ key: "waiting-for-admin-approval", label: "Admin approval pending." });
+      if (!isManualService) {
+        setDisplayStatus({
+          key: "waiting-for-admin-approval",
+          label: "Admin approval pending.",
+        });
+      }
       setJob((prev) =>
         prev
           ? {
               ...prev,
-              reportStatus: report?.status || "pending",
-              cleaningStatus: "completed",
+              ...(isManualService
+                ? {}
+                : {
+                    reportStatus: report?.status || "pending",
+                    cleaningStatus: "completed",
+                  }),
               cleaningReport: report,
             }
           : prev
@@ -224,6 +526,7 @@ function ViewJob() {
 
   const reportAlreadySubmitted =
     job &&
+    !isManualService &&
     ((job.reportStatus === "pending" && job.cleaningStatus === "completed") ||
       job.reportStatus === "approved");
 
@@ -266,6 +569,12 @@ function ViewJob() {
           <InfoRow label="Job ID" value={job._id} />
           <InfoRow label="Service Type" value={job.serviceType} />
           <InfoRow label="Date" value={job.serviceDate} />
+          {isManualService && (
+            <InfoRow
+              label="Report For"
+              value={formatDateLabel(selectedOccurrenceDate || job.serviceDate)}
+            />
+          )}
           <InfoRow
             label="Time"
             value={formatTimeTo12Hour(job.preferredTime) || "N/A"}
@@ -411,7 +720,32 @@ function ViewJob() {
       </Section>
 
       <Section title="Job Report">
-        <div className="grid sm:grid-cols-3 gap-4">
+        {isManualService && (
+          <div className="rounded-xl border border-[#C85344]/20 bg-[#C85344]/5 p-3">
+            <label className="text-sm font-medium text-gray-800">Report for date</label>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <select
+                value={selectedOccurrenceDate}
+                onChange={(e) => setSelectedOccurrenceDate(e.target.value)}
+                className="w-full sm:max-w-sm border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C85344]/50"
+              >
+                {occurrenceDateKeys.length === 0 && (
+                  <option value="">No assigned dates found</option>
+                )}
+                {occurrenceDateKeys.map((dateKey) => (
+                  <option key={dateKey} value={dateKey}>
+                    {formatDateLabel(dateKey)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-600">
+                Submit one report per assigned date.
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className={`grid gap-4 ${isManualService ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
           <div className="flex flex-col gap-1">
             <label className="text-sm text-gray-700">Arrival Time</label>
             <input
@@ -442,6 +776,17 @@ function ViewJob() {
               required
             />
           </div>
+          {isManualService && (
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-gray-700">Occurrence Date</label>
+              <input
+                type="text"
+                value={formatDateLabel(selectedOccurrenceDate)}
+                readOnly
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-700"
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -492,6 +837,10 @@ function ViewJob() {
       {job.cleaningReport && (
         <Section title="Submitted Report">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <InfoRow
+              label="Occurrence Date"
+              value={formatDateLabel(job.cleaningReport.occurrenceDate)}
+            />
             <InfoRow
               label="Arrival Time"
               value={formatTimeFromDate(job.cleaningReport.arrivalTime)}

@@ -5,6 +5,7 @@ const unwrap = (response) => response?.data?.data ?? response?.data ?? response 
 export const cleaningReportApi = {
   submit: async (quoteId, payload) => {
     const formData = new FormData();
+    if (payload.occurrenceDate) formData.append("occurrenceDate", payload.occurrenceDate);
     if (payload.arrivalTime) formData.append("arrivalTime", payload.arrivalTime);
     if (payload.startTime) formData.append("startTime", payload.startTime);
     if (payload.endTime) formData.append("endTime", payload.endTime);
