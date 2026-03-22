@@ -162,6 +162,7 @@ function ResidentialCleaning() {
         serviceDate,
         preferredTime: normalizedServiceTime,
         paymentFlow: "checkout",
+        businessAddress: isAuthenticated ? user?.address : contact.address,
         ...(isAuthenticated
           ? {
               firstName: parsedFirst,

@@ -246,6 +246,30 @@ const resolveMonthlyDatesMap = (schedule) => {
 };
 
 const buildJobOccurrences = (job, rangeStart, rangeEnd) => {
+  const progressOccurrences = Array.isArray(job?.occurrenceProgress)
+    ? job.occurrenceProgress
+    : [];
+  if (progressOccurrences.length > 0) {
+    return progressOccurrences
+      .map((entry) => {
+        const date = parseDateOnly(entry?.occurrenceDate);
+        if (!date) return null;
+        const normalized = startOfDay(date);
+        if (normalized < rangeStart || normalized > rangeEnd) {
+          return null;
+        }
+        return {
+          date: normalized,
+          dateKey: entry.occurrenceDate,
+          time: resolveOccurrenceTime(job),
+          job,
+          occurrence: entry,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+  }
+
   const occurrences = [];
   const schedule = job?.cleaningSchedule;
   const startOn = parseDateOnly(job?.serviceDate) || rangeStart;
@@ -642,7 +666,20 @@ function MyJobs() {
                   <div className="space-y-2">
                     {selectedDateGroup.items.map((entry) => {
                       const job = entry.job;
-                      const computed = deriveStatus(job);
+                      const computed = entry.occurrence?.cleanerStatus
+                        ? {
+                            key: entry.occurrence.cleanerStatus,
+                            label:
+                              entry.occurrence.cleanerStatus ===
+                              "waiting-for-admin-approval"
+                                ? "Admin approval pending."
+                                : entry.occurrence.cleanerStatus === "ongoing"
+                                ? "Ongoing"
+                                : entry.occurrence.cleanerStatus === "completed"
+                                ? "Completed"
+                                : "Pending",
+                          }
+                        : deriveStatus(job);
                       return (
                         <div
                           key={`${job._id}:${entry.dateKey}`}

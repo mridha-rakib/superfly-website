@@ -81,16 +81,58 @@ const SummaryRow = ({ label, value }) => (
 
 const CleanerCard = ({ cleaner }) => (
   <div className="rounded-2xl border border-gray-100 bg-[#F5F7FB] p-4 text-sm text-gray-700 space-y-1">
-    <p className="font-semibold text-gray-900">
-      {cleaner.fullName || cleaner.name || cleaner.email}
-    </p>
+    <div className="flex flex-wrap items-start justify-between gap-2">
+      <p className="font-semibold text-gray-900">
+        {cleaner.fullName || cleaner.name || cleaner.email}
+      </p>
+      {cleaner.cleanerProgress && (
+        <span
+          className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${cleanerStatusTone(
+            cleaner.cleanerProgress.cleanerStatus
+          )}`}
+        >
+          {cleanerStatusLabel(cleaner.cleanerProgress.cleanerStatus)}
+        </span>
+      )}
+    </div>
     {cleaner.phone && <p className="text-xs text-gray-600">Phone: {cleaner.phone}</p>}
     {cleaner.email && <p className="text-xs text-gray-600">Email: {cleaner.email}</p>}
+    {typeof cleaner.cleanerProgress?.cleanerEarningAmount === "number" && (
+      <p className="text-xs text-gray-600">
+        Payout: {formatCurrency(cleaner.cleanerProgress.cleanerEarningAmount)}
+      </p>
+    )}
   </div>
 );
 
 const formatCurrency = (value) =>
   typeof value === "number" ? `$${value.toFixed(2)}` : "-";
+
+const cleanerStatusLabel = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "completed":
+      return "Completed";
+    case "waiting-for-admin-approval":
+      return "Awaiting Approval";
+    case "ongoing":
+      return "On Site";
+    default:
+      return "Assigned";
+  }
+};
+
+const cleanerStatusTone = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "completed":
+      return "bg-green-100 text-green-700 border-green-200";
+    case "waiting-for-admin-approval":
+      return "bg-purple-100 text-purple-700 border-purple-200";
+    case "ongoing":
+      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+    default:
+      return "bg-gray-100 text-gray-700 border-gray-200";
+  }
+};
 
 function ViewBookingDetails() {
   const { id } = useParams();
@@ -144,6 +186,7 @@ function ViewBookingDetails() {
       : booking?.assignedCleanerId
       ? [{ email: booking.assignedCleanerId }]
       : [];
+  const cleanerProgressSummary = booking?.cleanerProgressSummary;
 
   const services = booking?.services || [];
 
@@ -221,6 +264,26 @@ function ViewBookingDetails() {
               : "Cleaner not assigned yet."}
           </p>
         </div>
+        {cleanerProgressSummary && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Detail
+              label="Completed"
+              value={`${cleanerProgressSummary.completed}/${cleanerProgressSummary.totalAssigned}`}
+            />
+            <Detail
+              label="Awaiting Approval"
+              value={String(cleanerProgressSummary.reportSubmitted)}
+            />
+            <Detail
+              label="On Site"
+              value={String(cleanerProgressSummary.inProgress)}
+            />
+            <Detail
+              label="Paid"
+              value={`${cleanerProgressSummary.paid}/${cleanerProgressSummary.totalAssigned}`}
+            />
+          </div>
+        )}
       </section>
 
       <section className="rounded-[32px] border border-[#E5E7EB] bg-white/90 p-6 shadow-[0_25px_60px_-40px_rgba(0,0,0,0.45)]">

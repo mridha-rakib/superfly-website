@@ -142,6 +142,18 @@ const getWeekdayPatternDayOfMonth = (year, month, week, day) => {
 };
 
 const buildOccurrenceDateKeys = (job, monthsAhead = 18) => {
+  const progressKeys = Array.from(
+    new Set(
+      (Array.isArray(job?.occurrenceProgress) ? job.occurrenceProgress : [])
+        .map((entry) => entry?.occurrenceDate)
+        .filter(Boolean)
+    )
+  ).sort((a, b) => (a > b ? 1 : -1));
+
+  if (progressKeys.length > 0) {
+    return progressKeys;
+  }
+
   const schedule = job?.cleaningSchedule;
   const startDate = parseDateOnly(job?.serviceDate);
   if (!startDate) return [];
@@ -296,7 +308,7 @@ const formatReportTime = (value) => {
 function ViewJob() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [job, setJob] = useState(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -317,12 +329,58 @@ function ViewJob() {
   const [hasArrived, setHasArrived] = useState(false);
   const [selectedOccurrenceDate, setSelectedOccurrenceDate] = useState("");
 
-  const deriveStatus = (job) => {
-    if (job.cleanerStatus) return job.cleanerStatus;
-    const hasCleaner = Boolean(job.assignedCleanerId || (job.assignedCleanerIds || []).length);
-    const cleaning = job.cleaningStatus;
-    const report = job.reportStatus;
-    const status = job.status;
+  const resolveSelectedOccurrenceProgress = (currentJob, occurrenceDate) => {
+    if (!currentJob || !isManualService) {
+      return currentJob?.activeOccurrenceProgress || null;
+    }
+
+    if (
+      currentJob.activeOccurrenceProgress?.occurrenceDate &&
+      currentJob.activeOccurrenceProgress.occurrenceDate === occurrenceDate
+    ) {
+      return currentJob.activeOccurrenceProgress;
+    }
+
+    return (
+      (currentJob.occurrenceProgress || []).find(
+        (entry) => entry.occurrenceDate === occurrenceDate
+      ) || null
+    );
+  };
+
+  const deriveStatus = (currentJob, occurrenceDate) => {
+    const normalizeStatusKey = (value) =>
+      typeof value === "string" ? value : value?.key || "";
+    const toStatusLabel = (value) => {
+      const key = normalizeStatusKey(value);
+      if (key === "waiting-for-admin-approval") return "Admin approval pending.";
+      if (key === "ongoing" || key === "cleaning_in_progress") return "Ongoing";
+      if (key === "completed") return "Completed";
+      if (key === "assigned") return "Assigned";
+      return "Pending";
+    };
+    const activeOccurrence = resolveSelectedOccurrenceProgress(
+      currentJob,
+      occurrenceDate
+    );
+    if (activeOccurrence?.cleanerStatus) {
+      return {
+        key: normalizeStatusKey(activeOccurrence.cleanerStatus),
+        label: toStatusLabel(activeOccurrence.cleanerStatus),
+      };
+    }
+    if (currentJob.cleanerStatus) {
+      return {
+        key: normalizeStatusKey(currentJob.cleanerStatus),
+        label: toStatusLabel(currentJob.cleanerStatus),
+      };
+    }
+    const hasCleaner = Boolean(
+      currentJob.assignedCleanerId || (currentJob.assignedCleanerIds || []).length
+    );
+    const cleaning = activeOccurrence?.cleaningStatus || currentJob.cleaningStatus;
+    const report = activeOccurrence?.reportStatus || currentJob.reportStatus;
+    const status = currentJob.status;
     const completedStatuses = new Set(["completed", "reviewed"]);
 
     if (report === "pending" && cleaning === "completed") {
@@ -340,17 +398,24 @@ function ViewJob() {
     return { key: "pending", label: "Pending" };
   };
 
+  const loadJob = async (occurrenceDate) => {
+    const params = occurrenceDate ? { occurrenceDate } : {};
+    const res = await quoteApi.getQuoteById(id, params);
+    setJob(res);
+    return res;
+  };
+
   useEffect(() => {
     if (!id) return;
     let active = true;
     setIsLoading(true);
     setError("");
+    const initialOccurrenceDate = searchParams.get("occurrenceDate") || undefined;
     quoteApi
-      .getQuoteById(id)
+      .getQuoteById(id, initialOccurrenceDate ? { occurrenceDate: initialOccurrenceDate } : {})
       .then((res) => {
         if (!active) return;
         setJob(res);
-        setDisplayStatus(deriveStatus(res));
       })
       .catch((err) => {
         if (!active) return;
@@ -365,7 +430,7 @@ function ViewJob() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, searchParams]);
 
   const isManualService =
     job?.serviceType === "commercial" || job?.serviceType === "post_construction";
@@ -403,6 +468,66 @@ function ViewJob() {
     setSelectedOccurrenceDate(defaultOccurrenceDate);
   }, [defaultOccurrenceDate]);
 
+  useEffect(() => {
+    const queryOccurrenceDate = searchParams.get("occurrenceDate") || "";
+    if (
+      !job ||
+      !isManualService ||
+      !selectedOccurrenceDate ||
+      queryOccurrenceDate === selectedOccurrenceDate
+    ) {
+      return;
+    }
+
+    let active = true;
+    setIsLoading(true);
+    setError("");
+
+    quoteApi
+      .getQuoteById(id, { occurrenceDate: selectedOccurrenceDate })
+      .then((res) => {
+        if (!active) return;
+        setJob(res);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(
+          err?.response?.data?.message || err?.message || "Could not load job details."
+        );
+      })
+      .finally(() => {
+        if (!active) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id, isManualService, job, searchParams, selectedOccurrenceDate]);
+
+  useEffect(() => {
+    if (!job) {
+      return;
+    }
+
+    const activeOccurrence = resolveSelectedOccurrenceProgress(
+      job,
+      selectedOccurrenceDate
+    );
+    const status = deriveStatus(job, selectedOccurrenceDate);
+    const activeCleaningStatus =
+      activeOccurrence?.cleaningStatus || job.cleaningStatus || "";
+    const activeReportStatus =
+      activeOccurrence?.reportStatus || job.reportStatus || "";
+
+    setDisplayStatus(status);
+    setHasArrived(activeCleaningStatus === "cleaning_in_progress");
+    setShowProgressCard(activeCleaningStatus === "cleaning_in_progress");
+    setShowApprovalCard(
+      activeReportStatus === "pending" && activeCleaningStatus === "completed"
+    );
+  }, [job, selectedOccurrenceDate]);
+
   if (isLoading) {
     return (
       <div className="max-w-5xl mx-auto p-8 text-center text-gray-500 text-lg">
@@ -419,16 +544,29 @@ function ViewJob() {
     );
   }
 
-  const computed = deriveStatus(job);
+  const activeOccurrenceProgress = resolveSelectedOccurrenceProgress(
+    job,
+    selectedOccurrenceDate
+  );
+  const computed = deriveStatus(job, selectedOccurrenceDate);
   const totalPrice = job.totalPrice || (job.paymentAmount ? job.paymentAmount / 100 : null);
   const earningAmount =
     job.serviceType === "residential"
       ? job.cleanerEarningAmount || (job.cleanerPercentage && totalPrice
           ? Number(((job.cleanerPercentage / 100) * totalPrice).toFixed(2))
           : null)
-      : null;
+      : activeOccurrenceProgress?.cleanerEarningAmount ||
+        job.activeOccurrenceProgress?.cleanerEarningAmount ||
+        null;
   const amountLabel = earningAmount ?? totalPrice;
-  const amountTitle = earningAmount ? "Your Earning" : "Total Price";
+  const amountTitle =
+    job.serviceType === "residential"
+      ? earningAmount
+        ? "Your Earning"
+        : "Total Price"
+      : earningAmount
+      ? "Occurrence Payout"
+      : "Total Price";
 
   const handleFileChange = (setter) => (e) => {
     const files = Array.from(e.target.files || []);
@@ -446,12 +584,18 @@ function ViewJob() {
     setArrivalSuccess("");
     setIsSubmitting(true);
     try {
-      await quoteApi.markArrived(job._id);
+      await quoteApi.markArrived(
+        job._id,
+        isManualService ? { occurrenceDate: selectedOccurrenceDate } : {}
+      );
+      const updatedJob = await loadJob(
+        isManualService ? selectedOccurrenceDate : undefined
+      );
       setArrivalSuccess("Arrival confirmed. Status updated to On Site.");
       setStatusOption("cleaning_in_progress");
-      setShowProgressCard(true);
-      setDisplayStatus({ key: "cleaning_in_progress", label: "Cleaning in Progress" });
-      setHasArrived(true);
+      setDisplayStatus(
+        deriveStatus(updatedJob, isManualService ? selectedOccurrenceDate : undefined)
+      );
     } catch (err) {
       setSubmitError(
         err?.response?.data?.message ||
@@ -492,26 +636,11 @@ function ViewJob() {
           )}.`
         : "Report submitted successfully.";
       setSubmitSuccess(successMessage);
-      setShowApprovalCard(true);
-      if (!isManualService) {
-        setDisplayStatus({
-          key: "waiting-for-admin-approval",
-          label: "Admin approval pending.",
-        });
-      }
-      setJob((prev) =>
-        prev
-          ? {
-              ...prev,
-              ...(isManualService
-                ? {}
-                : {
-                    reportStatus: report?.status || "pending",
-                    cleaningStatus: "completed",
-                  }),
-              cleaningReport: report,
-            }
-          : prev
+      const updatedJob = await loadJob(
+        isManualService ? selectedOccurrenceDate : undefined
+      );
+      setDisplayStatus(
+        deriveStatus(updatedJob, isManualService ? selectedOccurrenceDate : undefined)
       );
     } catch (err) {
       setSubmitError(
@@ -526,9 +655,25 @@ function ViewJob() {
 
   const reportAlreadySubmitted =
     job &&
-    !isManualService &&
-    ((job.reportStatus === "pending" && job.cleaningStatus === "completed") ||
-      job.reportStatus === "approved");
+    (isManualService
+      ? Boolean(
+          activeOccurrenceProgress?.reportId ||
+            activeOccurrenceProgress?.reportStatus === "pending" ||
+            activeOccurrenceProgress?.reportStatus === "approved"
+        )
+      : (job.reportStatus === "pending" && job.cleaningStatus === "completed") ||
+        job.reportStatus === "approved");
+
+  const handleOccurrenceChange = (value) => {
+    setSelectedOccurrenceDate(value);
+    const nextParams = new URLSearchParams(searchParams);
+    if (value) {
+      nextParams.set("occurrenceDate", value);
+    } else {
+      nextParams.delete("occurrenceDate");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-5 space-y-6 bg-gradient-to-b from-[#f9fbfd] to-white rounded-3xl">
@@ -726,7 +871,7 @@ function ViewJob() {
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
               <select
                 value={selectedOccurrenceDate}
-                onChange={(e) => setSelectedOccurrenceDate(e.target.value)}
+                onChange={(e) => handleOccurrenceChange(e.target.value)}
                 className="w-full sm:max-w-sm border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C85344]/50"
               >
                 {occurrenceDateKeys.length === 0 && (

@@ -26,13 +26,15 @@ export const quoteApi = {
     return unwrap(response);
   },
 
-  getQuoteById: async (quoteId) => {
-    const response = await httpClient.get(`/quotes/${quoteId}`);
+  getQuoteById: async (quoteId, params = {}) => {
+    const response = await httpClient.get(`/quotes/${quoteId}`, { params });
     return unwrap(response);
   },
 
-  markArrived: async (quoteId) => {
-    const response = await httpClient.patch(`/quotes/${quoteId}/arrived`);
+  markArrived: async (quoteId, params = {}) => {
+    const response = await httpClient.patch(`/quotes/${quoteId}/arrived`, null, {
+      params,
+    });
     return unwrap(response);
   },
 
