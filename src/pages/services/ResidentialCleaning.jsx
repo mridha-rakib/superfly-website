@@ -5,6 +5,13 @@ import { cleaningServiceApi } from "../../services/cleaningServiceApi";
 import { formatTimeTo12Hour, parseTimeTo24Hour } from "../../lib/time-utils";
 
 function ResidentialCleaning() {
+  const homeownerBenefits = [
+    "Reliable and professional cleaning team",
+    "Easy online booking and transparent pricing",
+    "Detailed, high-quality residential cleaning",
+    "Serving Columbus and Central Ohio",
+  ];
+
   const { isAuthenticated, user } = useAuthStore((state) => ({
     isAuthenticated: state.isAuthenticated,
     user: state.user,
@@ -202,10 +209,13 @@ function ResidentialCleaning() {
     <>
       <div className="flex flex-col items-center justify-center py-12 px-4 md:px-8 lg:px-20 bg-gray-50">
         <h1 className="text-3xl md:text-4xl font-bold mb-2 text-center text-gray-900">
-          Request an Instant Quote
+          What to Expect After Your Quote
         </h1>
         <p className="text-lg md:text-xl mb-8 text-center text-gray-700 max-w-3xl">
-          Fill out the form below and we'll get back to you as soon as possible.
+          Once you submit your information, you'll receive an instant estimated
+          price for your cleaning service. Our team will review your details
+          and follow up to confirm your appointment and ensure everything is
+          tailored to your needs.
         </p>
 
         <form
@@ -490,7 +500,7 @@ function ResidentialCleaning() {
               })}
               <div className="flex justify-between items-center font-bold text-lg mt-4 text-gray-900">
                 <span>Total</span>
-                <span>${totalPrice}</span>
+                <span>${totalPrice.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -500,9 +510,61 @@ function ResidentialCleaning() {
             disabled={isSubmitting || isCreating || isLoadingServices}
             className="w-full bg-[#C85344] text-white p-4 rounded-lg hover:bg-[#b84335] transition font-medium text-lg mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isSubmitting || isCreating ? "Redirecting to checkout..." : "Get a Quote"}
+            {isSubmitting || isCreating
+              ? "Redirecting to checkout..."
+              : "Get Your Instant Quote"}
           </button>
         </form>
+
+        <div className="mt-12 w-full max-w-4xl space-y-8">
+          <section className="rounded-lg bg-white p-8 shadow-lg">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Why Homeowners in Columbus Choose Superfly Services
+            </h2>
+            <ul className="mt-4 space-y-3 text-lg text-gray-700">
+              {homeownerBenefits.map((benefit) => (
+                <li key={benefit} className="flex items-start gap-3">
+                  <span className="mt-1 text-[#C85344]">+</span>
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section className="rounded-lg bg-white p-8 shadow-lg">
+            <h2 className="text-2xl font-bold text-gray-900">
+              What's Included in Our Residential Cleaning
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-gray-700">
+              Our residential cleaning services cover kitchens, bathrooms,
+              bedrooms, living areas, and common spaces. We focus on dusting,
+              sanitizing, vacuuming, and detailed cleaning to keep your home
+              fresh and spotless.
+            </p>
+          </section>
+
+          <section className="rounded-lg border border-[#f0c7c1] bg-[#fff6f4] p-6 text-base text-gray-700">
+            Prices are estimates based on the information provided. Final
+            pricing may vary depending on the condition of the home and
+            specific cleaning requirements.
+          </section>
+
+          <section className="rounded-lg bg-white p-8 shadow-lg">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Ready for a Cleaner Home?
+            </h2>
+            <p className="mt-4 text-lg leading-8 text-gray-700">
+              Get your instant quote today and let Superfly Services handle the
+              cleaning so you can enjoy a fresh, stress-free home.
+            </p>
+          </section>
+
+          <p className="text-center text-base leading-7 text-gray-600">
+            Superfly Services provides professional residential cleaning
+            services throughout Columbus, Ohio and surrounding areas, helping
+            homeowners maintain clean and comfortable living spaces.
+          </p>
+        </div>
       </div>
     </>
   );

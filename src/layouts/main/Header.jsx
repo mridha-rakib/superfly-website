@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Notification01FreeIcons,
@@ -13,12 +13,12 @@ import { useAuthStore } from "../../state/useAuthStore";
 import { useRealtimeNotificationStore } from "../../state/useRealtimeNotificationStore";
 
 function Header() {
-  const [activeTab, setActiveTab] = useState("Home");
   const [showServices, setShowServices] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, role, isAuthenticated, logout } = useAuthStore((state) => ({
     user: state.user,
@@ -79,21 +79,42 @@ function Header() {
     return [];
   };
 
+  const isRouteActive = (link) => {
+    if (!link) return false;
+    if (link === "/") return location.pathname === "/";
+    return (
+      location.pathname === link || location.pathname.startsWith(`${link}/`)
+    );
+  };
+
+  const isItemActive = (item) => {
+    if (item.dropdown) {
+      return (
+        location.pathname === "/services" ||
+        location.pathname.startsWith("/services/")
+      );
+    }
+
+    return isRouteActive(item.link);
+  };
+
+  const closeNavMenus = () => {
+    setShowServices(false);
+    setMobileMenuOpen(false);
+  };
+
   const handleDropdownClick = (e) => {
     e.stopPropagation();
     setShowServices(!showServices);
   };
 
   const handleSelect = (subItem) => {
-    setActiveTab(subItem.name);
-    setShowServices(false);
-    setMobileMenuOpen(false);
+    closeNavMenus();
     navigate(subItem.link);
   };
 
   const handleNavClick = (item) => {
-    setActiveTab(item.name);
-    setMobileMenuOpen(false);
+    closeNavMenus();
     navigate(item.link);
   };
 
@@ -106,7 +127,6 @@ function Header() {
     setMobileMenuOpen(false);
     setShowNotifications(false);
     await logout();
-    setActiveTab("Home");
     navigate("/login");
   };
 
@@ -162,6 +182,11 @@ function Header() {
     return () => document.removeEventListener("mousedown", onDocumentClick);
   }, [showNotifications]);
 
+  useEffect(() => {
+    closeNavMenus();
+    setShowNotifications(false);
+  }, [location.pathname]);
+
   return (
     <nav className="navbar-shell sticky top-0 z-50 w-full bg-white/90 backdrop-blur">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -183,7 +208,7 @@ function Header() {
             {/* Logo */}
             <Link
               to="/"
-              onClick={() => setActiveTab("Home")}
+              onClick={closeNavMenus}
               className="logo-highlight group relative flex items-center gap-3 rounded-2xl bg-white/80 px-2.5 py-1.5 transition-all duration-300 hover:-translate-y-0.5"
             >
               <div className="h-11 w-11 sm:h-12 sm:w-12 overflow-hidden rounded-xl bg-white p-[2px]">
@@ -195,10 +220,10 @@ function Header() {
               </div>
               <div className="hidden sm:block leading-tight">
                 <p className="text-sm font-semibold tracking-tight text-gray-900 transition-colors duration-300 group-hover:text-[#a6382a]">
-                  Superfly
+                  Superfly Services
                 </p>
                 <p className="text-[11px] text-gray-500 group-hover:text-gray-600 transition-colors">
-                  Cleaning Services
+                  Where Clean Takes Flight
                 </p>
               </div>
             </Link>
@@ -216,12 +241,12 @@ function Header() {
                         handleDropdownClick(e);
                       }}
                       className={`nav-pill flex items-center space-x-1 rounded-xl px-4 py-2 text-sm font-medium ${
-                        activeTab === item.name
+                        isItemActive(item)
                           ? "nav-pill-active bg-[#C85344]/10 text-[#C85344]"
                           : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                       }`}
                     >
-                      <span>{item.name}</span>
+                      <span className="nav-pill-label">{item.name}</span>
                       <HugeiconsIcon
                         icon={showServices ? ArrowUp01Icon : ArrowDown01Icon}
                         className={`w-4 h-4 transition-transform duration-200 ${showServices ? "rotate-180" : ""}`}
@@ -236,7 +261,7 @@ function Header() {
                               key={idx}
                               onClick={() => handleSelect(subItem)}
                               className={`block w-full px-4 py-2.5 text-left text-sm transition-colors ${
-                                activeTab === subItem.name
+                                isRouteActive(subItem.link)
                                   ? "bg-[#C85344] text-white"
                                   : "text-gray-700 hover:bg-[#fff1ee] hover:text-[#C85344]"
                               }`}
@@ -255,14 +280,14 @@ function Header() {
                 <Link
                   key={index}
                   to={item.link}
-                  onClick={() => handleNavClick(item)}
+                  onClick={closeNavMenus}
                   className={`nav-pill rounded-xl px-4 py-2 text-sm font-medium ${
-                    activeTab === item.name
+                    isItemActive(item)
                       ? "nav-pill-active bg-[#C85344]/10 text-[#C85344]"
                       : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                   }`}
                 >
-                  {item.name}
+                  <span className="nav-pill-label">{item.name}</span>
                 </Link>
               );
             })}
@@ -391,7 +416,7 @@ function Header() {
                       <button
                         onClick={handleDropdownClick}
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-base font-medium transition-colors ${
-                          activeTab === item.name
+                          isItemActive(item)
                             ? "bg-[#C85344]/10 text-[#C85344]"
                             : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                         }`}
@@ -410,7 +435,7 @@ function Header() {
                               key={idx}
                               onClick={() => handleSelect(subItem)}
                               className={`block w-full rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-                                activeTab === subItem.name
+                                isRouteActive(subItem.link)
                                   ? "bg-[#C85344] text-white"
                                   : "text-gray-700 hover:bg-[#fff1ee] hover:text-[#C85344]"
                               }`}
@@ -429,7 +454,7 @@ function Header() {
                     key={index}
                     onClick={() => handleNavClick(item)}
                     className={`block w-full rounded-xl px-3 py-2 text-left text-base font-medium transition-colors ${
-                      activeTab === item.name
+                      isItemActive(item)
                         ? "bg-[#C85344]/10 text-[#C85344]"
                         : "text-gray-700 hover:bg-gray-50 hover:text-[#C85344]"
                     }`}

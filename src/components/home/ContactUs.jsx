@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Call02Icon,
-  Mail01Icon,
-  Location10Icon,
-} from "@hugeicons/core-free-icons";
+import { Call02Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import { toast } from "react-toastify";
 import { contactApi } from "../../services/contactApi";
 
@@ -76,41 +72,34 @@ function ContactUs() {
 
   return (
     <>
-      <h1 className="text-4xl font-bold p-5 text-center">Contact Us</h1>
+      <h1 className="text-4xl font-bold p-5 text-center">
+        Where Clean Takes Flight
+      </h1>
 
       <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-start gap-10 p-5">
-
-        {/* Left Section */}
         <div className="w-full md:w-1/2">
           <h2 className="text-2xl font-bold mb-2">Get in touch</h2>
           <p className="text-lg text-gray-600 mb-6">
-            Fill out the form below to get in touch with us.
+            Call or email Superfly Services for residential, commercial, and
+            post-construction cleaning in Columbus and surrounding areas.
           </p>
 
-          {/* Contact Info */}
           <div>
             <h3 className="text-xl font-bold mb-3">Contact Info</h3>
 
             <ul className="space-y-3 text-gray-700">
               <li className="flex items-center gap-3">
                 <HugeiconsIcon icon={Call02Icon} />
-                <span>+123456789</span>
+                <span>614-206-0296</span>
               </li>
 
               <li className="flex items-center gap-3">
                 <HugeiconsIcon icon={Mail01Icon} />
-                <span>info@superfly.com</span>
-              </li>
-
-              <li className="flex items-center gap-3">
-                <HugeiconsIcon icon={Location10Icon} />
-                <span>123 Main St, Anytown, USA</span>
+                <span>info@superflycleaning.com</span>
               </li>
             </ul>
           </div>
         </div>
-
-        {/* Form Section */}
         <form
           className="w-full md:w-1/2 bg-white shadow-md p-5 rounded-lg border border-gray-100"
           onSubmit={handleSubmit}

@@ -43,30 +43,42 @@
   transition: transform 220ms ease, color 220ms ease, background-color 220ms ease;
 }
 
-.nav-pill::after {
+.nav-pill-label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav-pill-label::after {
   content: "";
   position: absolute;
-  left: 24%;
-  right: 24%;
-  bottom: 6px;
-  height: 2px;
+  left: 50%;
+  bottom: -7px;
+  width: 100%;
+  height: 2.5px;
   border-radius: 9999px;
   background: linear-gradient(90deg, #c85344, #f17d65);
-  transform: scaleX(0);
+  box-shadow: 0 6px 16px -12px rgba(200, 83, 68, 0.45);
+  transform: translateX(-50%) scaleX(0.72);
   transform-origin: center;
   opacity: 0;
-  transition: transform 220ms ease, opacity 220ms ease;
+  transition: transform 220ms ease, opacity 220ms ease, box-shadow 220ms ease;
 }
 
 .nav-pill:hover {
   transform: translateY(-1px);
 }
 
-.nav-pill:hover::after,
-.nav-pill:focus-visible::after,
-.nav-pill-active::after {
+.nav-pill:hover .nav-pill-label::after,
+.nav-pill:focus-visible .nav-pill-label::after {
+  opacity: 0.55;
+  transform: translateX(-50%) scaleX(1);
+}
+
+.nav-pill-active .nav-pill-label::after {
   opacity: 1;
-  transform: scaleX(1);
+  transform: translateX(-50%) scaleX(1);
+  box-shadow: 0 8px 18px -12px rgba(200, 83, 68, 0.65);
 }
 
 .nav-dropdown-panel,
@@ -84,7 +96,7 @@
 
   .logo-highlight,
   .nav-pill,
-  .nav-pill::after {
+  .nav-pill-label::after {
     transition: none;
   }
 }

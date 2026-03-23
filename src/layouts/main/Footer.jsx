@@ -1,19 +1,27 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Call02Icon,
-  Location10Icon,
-  Mail01Icon,
-} from "@hugeicons/core-free-icons";
+import { Call02Icon, Mail01Icon } from "@hugeicons/core-free-icons";
 import superflyLogo from "../../assets/superfly-logo.svg";
 
 function Footer() {
+  const quickLinks = [
+    { label: "Home", to: "/" },
+    { label: "Residential Cleaning", to: "/services/residential" },
+    {
+      label: "Commercial Cleaning",
+      to: "/services/book-site-visit-commercial",
+    },
+    {
+      label: "Post-Construction Cleaning",
+      to: "/services/book-site-visit-post-construction",
+    },
+    { label: "Contact", to: "/contact" },
+  ];
+
   return (
     <footer className="bg-[#F7E5E3] border-t border-gray-200">
-      {/* Top Section */}
-      <div className="max-w-[1400px] mx-auto grid grid-cols-1 sm:grid-cols-3 gap-10 p-10">
-
-        {/* Logo + About */}
+      <div className="max-w-[1400px] mx-auto grid grid-cols-1 gap-10 p-10 sm:grid-cols-3">
         <div className="flex flex-col">
           <img
             src={superflyLogo}
@@ -22,54 +30,51 @@ function Footer() {
           />
 
           <h1 className="font-bold text-xl">Superfly Services</h1>
+          <p className="mt-1 text-sm font-semibold uppercase tracking-[0.18em] text-[#8f3529]">
+            Where Clean Takes Flight
+          </p>
 
-          <p className="text-gray-600 mt-2 leading-relaxed">
-            Professional cleaning services that make your life easier.  
-            Fast, reliable, and affordable cleaning solutions for your 
-            home and office.
+          <p className="mt-2 leading-relaxed text-gray-600">
+            Superfly Services proudly provides professional cleaning services
+            throughout Columbus, Ohio and surrounding communities including
+            Westerville, Dublin, Worthington, and Hilliard.
           </p>
         </div>
 
-        {/* Contact Info */}
         <div className="flex flex-col">
-          <h1 className="text-xl font-bold mb-3">Contact Info</h1>
+          <h1 className="mb-3 text-xl font-bold">Contact Info</h1>
 
           <ul className="space-y-3 text-gray-700">
             <li className="flex items-center gap-3">
               <HugeiconsIcon icon={Call02Icon} />
-              <span>+123456789</span>
+              <span>614-206-0296</span>
             </li>
 
             <li className="flex items-center gap-3">
               <HugeiconsIcon icon={Mail01Icon} />
-              <span>info@superfly.com</span>
-            </li>
-
-            <li className="flex items-center gap-3">
-              <HugeiconsIcon icon={Location10Icon} />
-              <span>123 Main St, Anytown, USA</span>
+              <span>info@superflycleaning.com</span>
             </li>
           </ul>
         </div>
 
-        {/* Quick Links */}
         <div className="flex flex-col">
-          <h1 className="text-xl font-bold mb-3">Quick Links</h1>
+          <h1 className="mb-3 text-xl font-bold">Quick Links</h1>
 
           <ul className="space-y-2 text-gray-700">
-            <li className="hover:text-[#C85344] cursor-pointer">Home</li>
-            <li className="hover:text-[#C85344] cursor-pointer">About</li>
-            <li className="hover:text-[#C85344] cursor-pointer">Services</li>
-            <li className="hover:text-[#C85344] cursor-pointer">Blog</li>
-            <li className="hover:text-[#C85344] cursor-pointer">Contact</li>
+            {quickLinks.map((link) => (
+              <li key={link.to}>
+                <Link className="hover:text-[#C85344]" to={link.to}>
+                  {link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
-
       </div>
 
-      {/* Bottom Section */}
-      <p className="text-center text-gray-500 py-4 border-t border-gray-200">
-        © 2025 Superfly. All rights reserved.
+      <p className="border-t border-gray-200 py-4 text-center text-gray-500">
+        Copyright {new Date().getFullYear()} Superfly Services. All rights
+        reserved.
       </p>
     </footer>
   );

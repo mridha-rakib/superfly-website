@@ -4,6 +4,34 @@ import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
 
 function BookSiteVisitPostConstraction() {
+  const processSteps = [
+    {
+      title: "1. Submit Project Details",
+      body:
+        "Start by filling out the form with information about your construction site. Let us know the size of the project, timeline, and type of cleaning needed so we can begin planning your service.",
+    },
+    {
+      title: "2. Schedule a Site Visit",
+      body:
+        "Our team coordinates a walkthrough of the job site to assess the scope of work. We meet with the general contractor, project manager, or site supervisor to understand all cleaning requirements.",
+    },
+    {
+      title: "3. On-Site Evaluation",
+      body:
+        "During the visit, we evaluate the condition of the site, identify all areas that require cleaning, and determine whether the project needs progress cleaning, multi-phase cleaning, or a final construction clean.",
+    },
+    {
+      title: "4. Customized Cleaning Plan & Quote",
+      body:
+        "We create a tailored post-construction cleaning scope of work based on your project. This includes the type of cleaning required, timeline, and a detailed quote designed to meet your budget and deadlines.",
+    },
+    {
+      title: "5. Professional Cleaning Execution",
+      body:
+        "Our team delivers high-quality cleaning services to remove dust, debris, and construction residue. We ensure the site is clean, safe, and ready for inspection, occupancy, or handoff.",
+    },
+  ];
+
   const { user } = useAuthStore();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -127,12 +155,29 @@ function BookSiteVisitPostConstraction() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-5 md:px-8">
       <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 text-center">
-        Book Site Visit for Post Construction Cleaning
+        How Our Post-Construction Cleaning Process Works
       </h1>
       <p className="mb-8 text-gray-700 text-center text-lg">
-        Fill up the form below to book a site visit for post construction
-        cleaning.
+        At Superfly Services, we provide detailed and reliable
+        post-construction cleaning services in Columbus and throughout Ohio. We
+        work with general contractors, project managers, and builders to
+        deliver customized cleaning solutions that prepare job sites for final
+        turnover.
       </p>
+
+      <div className="mb-10 grid gap-4">
+        {processSteps.map((step) => (
+          <section
+            key={step.title}
+            className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+          >
+            <h2 className="text-xl font-bold text-gray-900">{step.title}</h2>
+            <p className="mt-3 text-base leading-7 text-gray-700">
+              {step.body}
+            </p>
+          </section>
+        ))}
+      </div>
 
       <form
         className="bg-white shadow-lg rounded-xl p-6 md:p-8 space-y-6 border border-gray-200"
@@ -327,9 +372,26 @@ function BookSiteVisitPostConstraction() {
           disabled={isSubmitting}
           className="w-full bg-[#C85344] text-white p-4 rounded-xl hover:bg-[#b84335] transition font-medium text-lg disabled:opacity-60"
         >
-          {isSubmitting ? "Submitting..." : "Book a visit"}
+          {isSubmitting ? "Submitting..." : "Submit Project Details"}
         </button>
       </form>
+
+      <section className="mt-10 rounded-lg bg-white p-8 shadow-lg">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Post-Construction Cleaning Services Across Ohio
+        </h2>
+        <p className="mt-4 text-base leading-7 text-gray-700">
+          Superfly Services provides professional construction cleaning
+          services in Columbus, Central Ohio, and surrounding areas. Whether
+          it's a residential build, commercial project, or renovation, we
+          deliver dependable cleaning solutions tailored to your project.
+        </p>
+        <p className="mt-4 text-base leading-7 text-gray-700">
+          We work closely with contractors and project managers to ensure every
+          job site is completed to a high standard and ready for the next
+          phase.
+        </p>
+      </section>
       {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

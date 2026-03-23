@@ -4,6 +4,34 @@ import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
 
 function BookSiteVisitCommercial() {
+  const processSteps = [
+    {
+      title: "1. Schedule a Site Visit",
+      body:
+        "Start by submitting your information to book a walkthrough of your facility. We coordinate a convenient time to meet with you or your team and assess your space.",
+    },
+    {
+      title: "2. On-Site Walkthrough & Consultation",
+      body:
+        "During the visit, we meet with the business owner, manager, or supervisor to understand your needs. We evaluate the space, discuss cleaning priorities, and identify all areas that require routine maintenance.",
+    },
+    {
+      title: "3. Customized Cleaning Plan",
+      body:
+        "We create a tailored commercial cleaning scope of work based on your facility. This includes recommended cleaning frequency, specific tasks, and a structured plan designed to keep your space consistently clean.",
+    },
+    {
+      title: "4. Supply Management & Scheduling",
+      body:
+        "Superfly Services helps manage cleaning supplies and ensures your facility is always stocked as needed. We also establish a reliable cleaning schedule so your business stays clean without disruption.",
+    },
+    {
+      title: "5. Ongoing Cleaning & Support",
+      body:
+        "Our team delivers consistent, high-quality cleaning services while maintaining your facility over time. We adjust services as needed to ensure your expectations are always met.",
+    },
+  ];
+
   const { user } = useAuthStore();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -130,11 +158,29 @@ function BookSiteVisitCommercial() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-5 md:px-8">
       <h1 className="text-3xl md:text-4xl font-bold mb-3 text-gray-900 text-center">
-        Commercial Cleaning Information
+        How Our Commercial Cleaning Process Works
       </h1>
       <p className="mb-8 text-gray-700 text-center text-lg">
-        Provide your company details so we can prepare an accurate quote.
+        At Superfly Services, we provide professional commercial cleaning
+        services in Columbus, Ohio designed to take the burden of cleaning
+        completely off your team. Our process is built to create a customized
+        cleaning plan that keeps your facility clean, organized, and fully
+        maintained without adding extra work to your staff.
       </p>
+
+      <div className="mb-10 grid gap-4">
+        {processSteps.map((step) => (
+          <section
+            key={step.title}
+            className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm"
+          >
+            <h2 className="text-xl font-bold text-gray-900">{step.title}</h2>
+            <p className="mt-3 text-base leading-7 text-gray-700">
+              {step.body}
+            </p>
+          </section>
+        ))}
+      </div>
 
       <form
         className="bg-white shadow-md rounded-lg p-6 md:p-8 space-y-6 border border-gray-200"
@@ -334,9 +380,27 @@ function BookSiteVisitCommercial() {
           disabled={isSubmitting}
           className="w-full bg-[#C85344] text-white p-4 rounded-lg hover:bg-[#b84335] transition font-medium text-lg disabled:opacity-60"
         >
-          {isSubmitting ? "Submitting..." : "Submit info."}
+          {isSubmitting ? "Submitting..." : "Schedule Site Visit"}
         </button>
       </form>
+
+      <section className="mt-10 rounded-lg bg-white p-8 shadow-md">
+        <h2 className="text-2xl font-bold text-gray-900">
+          Complete Facility Cleaning for Businesses in Columbus
+        </h2>
+        <p className="mt-4 text-base leading-7 text-gray-700">
+          Superfly Services goes beyond standard cleaning companies by
+          providing full-service commercial cleaning solutions in Columbus and
+          Central Ohio. We handle everything from cleaning schedules to supply
+          management so business owners and managers can focus on daily
+          operations.
+        </p>
+        <p className="mt-4 text-base leading-7 text-gray-700">
+          Whether you manage an office, facility, or commercial space, our goal
+          is to deliver dependable cleaning services that keep your environment
+          clean, professional, and ready for business.
+        </p>
+      </section>
 
       {/* Success Modal */}
       {showSuccessModal && (
