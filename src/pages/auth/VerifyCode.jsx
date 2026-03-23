@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { authApi } from "../../services/authApi";
 import superflyLogo from "../../assets/superfly-logo.svg";
@@ -11,18 +11,15 @@ const VerifyCode = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || "";
-  const mode = location.state?.mode || "verify-email"; // "password-reset" | "verify-email"
+  const searchParams = new URLSearchParams(location.search);
+  const [email, setEmail] = useState(
+    () => (location.state?.email || searchParams.get("email") || "").trim()
+  );
+  const mode = location.state?.mode || searchParams.get("mode") || "verify-email"; // "password-reset" | "verify-email"
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
-
-  useEffect(() => {
-    if (!email) {
-      navigate("/register", { replace: true });
-    }
-  }, [email, navigate]);
 
   const handleChange = (element, index) => {
     if (isNaN(element.value)) return false;
@@ -54,6 +51,11 @@ const VerifyCode = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
     const code = otp.join("");
     if (code.length !== 4) {
       setError("Please enter the 4-digit code.");
@@ -62,13 +64,13 @@ const VerifyCode = () => {
     setIsVerifying(true);
     try {
       if (mode === "password-reset") {
-        await authApi.verifyPasswordOtp({ email, otp: code });
-        navigate("/set-new-password", { replace: true, state: { email, otp: code } });
+        await authApi.verifyPasswordOtp({ email: normalizedEmail, otp: code });
+        navigate("/set-new-password", { replace: true, state: { email: normalizedEmail, otp: code } });
       } else {
-        await authApi.verifyEmail({ email, code });
+        await authApi.verifyEmail({ email: normalizedEmail, code });
         navigate("/login", {
           replace: true,
-          state: { emailVerified: true, email },
+          state: { emailVerified: true, email: normalizedEmail },
         });
       }
     } catch (err) {
@@ -85,13 +87,18 @@ const VerifyCode = () => {
   const handleResend = async () => {
     setError("");
     setInfo("");
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
     setIsResending(true);
     try {
       if (mode === "password-reset") {
-        await authApi.resendPasswordOtp({ email });
+        await authApi.resendPasswordOtp({ email: normalizedEmail });
         setInfo("A new password reset code has been sent to your email.");
       } else {
-        await authApi.resendVerification({ email });
+        await authApi.resendVerification({ email: normalizedEmail });
         setInfo("A new code has been sent to your email.");
       }
     } catch (err) {
@@ -135,6 +142,24 @@ const VerifyCode = () => {
                 {info}
               </div>
             )}
+            <div>
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full h-12 px-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-[#FFD1E8] focus:border-[#FFD1E8]"
+                required
+                disabled={isVerifying || isResending}
+              />
+            </div>
             <div
               className="flex flex-row gap-2 items-center justify-center"
               onPaste={handlePaste}
