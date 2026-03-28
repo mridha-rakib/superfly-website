@@ -1,11 +1,9 @@
 import { create } from "zustand";
+import { getErrorMessage } from "../lib/api-error";
 import { reviewApi } from "../services/reviewApi";
 
-const parseError = (error) =>
-  error?.response?.data?.message ||
-  error?.response?.data?.error ||
-  error?.message ||
-  "Something went wrong. Please try again.";
+const parseError = (error, fallback = "Something went wrong. Please try again.") =>
+  getErrorMessage(error, fallback);
 
 const initialState = {
   reviews: [],
@@ -13,7 +11,7 @@ const initialState = {
   error: null,
 };
 
-export const useReviewStore = create((set, get) => ({
+export const useReviewStore = create((set) => ({
   ...initialState,
 
   fetchReviews: async () => {

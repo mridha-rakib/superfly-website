@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
+import { getErrorMessage } from "@/lib/api-error";
+import {
+  getFieldErrorId,
+  useInlineFormErrors,
+} from "@/hooks/useInlineFormErrors";
+import { toast } from "@/lib/notify";
 import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
 
@@ -49,6 +54,13 @@ function BookSiteVisitCommercial() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const { getFieldA11yProps, getFieldError, setFieldError, validateField } =
+    useInlineFormErrors();
+
+  const getFieldClassName = (fieldName) =>
+    `p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344] ${
+      getFieldError(fieldName) ? "border-red-500" : "border-gray-300"
+    }`;
 
   const cleaningServiceOptions = [
     { value: "janitorial_services", label: "Janitorial Services" },
@@ -69,27 +81,32 @@ function BookSiteVisitCommercial() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     setError("");
+    const form = e.currentTarget;
 
-    const numericSquareFoot = Number(formData.squareFoot);
-    const validationErrors = [];
+    const isValid = [
+      ["companyName", "Company name"],
+      ["companyAddress", "Company address"],
+      ["companyPhone", "Company phone number"],
+      ["companyEmail", "Company email"],
+      ["preferredDate", "Preferred date"],
+      ["preferredTime", "Preferred time"],
+      ["cleaningFrequency", "Cleaning frequency"],
+      ["squareFoot", "Building size"],
+    ].every(([field, label]) =>
+      validateField(field, form.elements.namedItem(field), { label })
+    );
 
-    if (!formData.companyName.trim()) validationErrors.push("Company Name is required.");
-    if (!formData.companyAddress.trim()) validationErrors.push("Company Address is required.");
-    if (!formData.companyPhone.trim()) validationErrors.push("Company Phone Number is required.");
-    if (!formData.companyEmail.trim()) validationErrors.push("Company Email is required.");
-    if (!formData.preferredDate) validationErrors.push("Preferred Date is required.");
-    if (!formData.preferredTime) validationErrors.push("Preferred Time is required.");
-    if (!formData.cleaningFrequency) validationErrors.push("Cleaning Frequency is required.");
-    if (!formData.cleaningServices.length)
-      validationErrors.push("Select at least one type of cleaning service.");
-    if (!Number.isFinite(numericSquareFoot) || numericSquareFoot <= 0)
-      validationErrors.push("Building Size must be a positive number.");
+    const cleaningServicesMessage = formData.cleaningServices.length
+      ? ""
+      : "Select at least one type of cleaning service.";
+    setFieldError("cleaningServices", cleaningServicesMessage);
 
-    if (validationErrors.length) {
+    if (!isValid || cleaningServicesMessage) {
       setIsSubmitting(false);
-      setError(validationErrors.join(" "));
       return;
     }
+
+    const numericSquareFoot = Number(formData.squareFoot);
 
     quoteApi
       .createCommercialRequest({
@@ -123,10 +140,7 @@ function BookSiteVisitCommercial() {
         });
       })
       .catch((err) => {
-        const msg =
-          err?.response?.data?.message ||
-          err?.message ||
-          "Could not submit request. Please try again.";
+        const msg = getErrorMessage(err, "Could not submit request. Please try again.");
         setError(msg);
         toast.error(msg);
       })
@@ -139,6 +153,26 @@ function BookSiteVisitCommercial() {
       ...prev,
       [id]: value,
     }));
+    if (getFieldError(id)) {
+      validateField(id, e.target, {
+        label:
+          id === "companyName"
+            ? "Company name"
+            : id === "companyAddress"
+            ? "Company address"
+            : id === "companyPhone"
+            ? "Company phone number"
+            : id === "companyEmail"
+            ? "Company email"
+            : id === "preferredDate"
+            ? "Preferred date"
+            : id === "preferredTime"
+            ? "Preferred time"
+            : id === "cleaningFrequency"
+            ? "Cleaning frequency"
+            : "Building size",
+      });
+    }
   };
 
   const handleServiceToggle = (value) => {
@@ -147,6 +181,10 @@ function BookSiteVisitCommercial() {
       const updated = exists
         ? prev.cleaningServices.filter((item) => item !== value)
         : [...prev.cleaningServices, value];
+      setFieldError(
+        "cleaningServices",
+        updated.length ? "" : "Select at least one type of cleaning service."
+      );
       return { ...prev, cleaningServices: updated };
     });
   };
@@ -200,10 +238,11 @@ function BookSiteVisitCommercial() {
             <input
               type="text"
               id="name"
+              name="name"
               placeholder="Contact name"
               value={formData.name}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              className={getFieldClassName("name")}
             />
           </div>
           <div className="flex-1 flex flex-col">
@@ -213,12 +252,22 @@ function BookSiteVisitCommercial() {
             <input
               type="text"
               id="companyName"
+              name="companyName"
               placeholder="Company Name"
               value={formData.companyName}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("companyName", event.target, { label: "Company name" })
+              }
+              className={getFieldClassName("companyName")}
               required
+              {...getFieldA11yProps("companyName")}
             />
+            {getFieldError("companyName") && (
+              <p id={getFieldErrorId("companyName")} className="mt-1 text-sm text-red-600">
+                {getFieldError("companyName")}
+              </p>
+            )}
           </div>
         </div>
 
@@ -231,12 +280,22 @@ function BookSiteVisitCommercial() {
             <input
               type="email"
               id="companyEmail"
+              name="companyEmail"
               placeholder="email@company.com"
               value={formData.companyEmail}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("companyEmail", event.target, { label: "Company email" })
+              }
+              className={getFieldClassName("companyEmail")}
               required
+              {...getFieldA11yProps("companyEmail")}
             />
+            {getFieldError("companyEmail") && (
+              <p id={getFieldErrorId("companyEmail")} className="mt-1 text-sm text-red-600">
+                {getFieldError("companyEmail")}
+              </p>
+            )}
           </div>
           <div className="flex-1 flex flex-col">
             <label htmlFor="companyPhone" className="mb-2 font-medium text-gray-700">
@@ -245,12 +304,24 @@ function BookSiteVisitCommercial() {
             <input
               type="tel"
               id="companyPhone"
+              name="companyPhone"
               placeholder="(555) 555-5555"
               value={formData.companyPhone}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("companyPhone", event.target, {
+                  label: "Company phone number",
+                })
+              }
+              className={getFieldClassName("companyPhone")}
               required
+              {...getFieldA11yProps("companyPhone")}
             />
+            {getFieldError("companyPhone") && (
+              <p id={getFieldErrorId("companyPhone")} className="mt-1 text-sm text-red-600">
+                {getFieldError("companyPhone")}
+              </p>
+            )}
           </div>
         </div>
 
@@ -263,12 +334,27 @@ function BookSiteVisitCommercial() {
             <input
               type="text"
               id="companyAddress"
+              name="companyAddress"
               placeholder="Street, City, State"
               value={formData.companyAddress}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("companyAddress", event.target, {
+                  label: "Company address",
+                })
+              }
+              className={getFieldClassName("companyAddress")}
               required
+              {...getFieldA11yProps("companyAddress")}
             />
+            {getFieldError("companyAddress") && (
+              <p
+                id={getFieldErrorId("companyAddress")}
+                className="mt-1 text-sm text-red-600"
+              >
+                {getFieldError("companyAddress")}
+              </p>
+            )}
           </div>
           <div className="flex-1 flex flex-col">
             <label htmlFor="squareFoot" className="mb-2 font-medium text-gray-700">
@@ -278,12 +364,22 @@ function BookSiteVisitCommercial() {
               type="number"
               min="1"
               id="squareFoot"
+              name="squareFoot"
               placeholder="e.g. 5000"
               value={formData.squareFoot}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("squareFoot", event.target, { label: "Building size" })
+              }
+              className={getFieldClassName("squareFoot")}
               required
+              {...getFieldA11yProps("squareFoot")}
             />
+            {getFieldError("squareFoot") && (
+              <p id={getFieldErrorId("squareFoot")} className="mt-1 text-sm text-red-600">
+                {getFieldError("squareFoot")}
+              </p>
+            )}
           </div>
         </div>
 
@@ -306,6 +402,14 @@ function BookSiteVisitCommercial() {
               </label>
             ))}
           </div>
+          {getFieldError("cleaningServices") && (
+            <p
+              id={getFieldErrorId("cleaningServices")}
+              className="mt-1 text-sm text-red-600"
+            >
+              {getFieldError("cleaningServices")}
+            </p>
+          )}
         </div>
 
         {/* Frequency & Schedule */}
@@ -316,10 +420,17 @@ function BookSiteVisitCommercial() {
             </label>
             <select
               id="cleaningFrequency"
+              name="cleaningFrequency"
               value={formData.cleaningFrequency}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("cleaningFrequency", event.target, {
+                  label: "Cleaning frequency",
+                })
+              }
+              className={getFieldClassName("cleaningFrequency")}
               required
+              {...getFieldA11yProps("cleaningFrequency")}
             >
               <option value="">Select frequency</option>
               {frequencyOptions.map((option) => (
@@ -328,6 +439,14 @@ function BookSiteVisitCommercial() {
                 </option>
               ))}
             </select>
+            {getFieldError("cleaningFrequency") && (
+              <p
+                id={getFieldErrorId("cleaningFrequency")}
+                className="mt-1 text-sm text-red-600"
+              >
+                {getFieldError("cleaningFrequency")}
+              </p>
+            )}
           </div>
 
           <div className="flex-1 flex flex-col">
@@ -337,11 +456,26 @@ function BookSiteVisitCommercial() {
             <input
               type="date"
               id="preferredDate"
+              name="preferredDate"
               value={formData.preferredDate}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("preferredDate", event.target, {
+                  label: "Preferred date",
+                })
+              }
+              className={getFieldClassName("preferredDate")}
               required
+              {...getFieldA11yProps("preferredDate")}
             />
+            {getFieldError("preferredDate") && (
+              <p
+                id={getFieldErrorId("preferredDate")}
+                className="mt-1 text-sm text-red-600"
+              >
+                {getFieldError("preferredDate")}
+              </p>
+            )}
           </div>
 
           <div className="flex-1 flex flex-col">
@@ -351,11 +485,26 @@ function BookSiteVisitCommercial() {
             <input
               type="time"
               id="preferredTime"
+              name="preferredTime"
               value={formData.preferredTime}
               onChange={handleInputChange}
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
+              onBlur={(event) =>
+                validateField("preferredTime", event.target, {
+                  label: "Preferred time",
+                })
+              }
+              className={getFieldClassName("preferredTime")}
               required
+              {...getFieldA11yProps("preferredTime")}
             />
+            {getFieldError("preferredTime") && (
+              <p
+                id={getFieldErrorId("preferredTime")}
+                className="mt-1 text-sm text-red-600"
+              >
+                {getFieldError("preferredTime")}
+              </p>
+            )}
           </div>
         </div>
 
@@ -435,3 +584,4 @@ function BookSiteVisitCommercial() {
 }
 
 export default BookSiteVisitCommercial;
+

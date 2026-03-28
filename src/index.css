@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+label:not(:has(.required-indicator)):has(+ :is(input, select, textarea)[required])::after,
+label:not(:has(.required-indicator)):has(+ div :is(input, select, textarea)[required])::after {
+  content: " *";
+  color: #dc2626;
+}
+
 :root {
   --primary-color: #c85344;
   --primary-color-strong: #b84335;

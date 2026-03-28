@@ -1,4 +1,5 @@
 import axios from "axios";
+import { hydrateError } from "./api-error";
 
 const API_BASE_URL =
   import.meta.env.VITE_BASE_URL || "http://localhost:5173/api/v1";
@@ -96,7 +97,7 @@ httpClient.interceptors.response.use(
       if (invalidAccessToken && !isAuthRoute(originalRequest)) {
         onUnauthorizedLogout?.();
       }
-      return Promise.reject(error);
+      return Promise.reject(hydrateError(error));
     }
 
     if (isRefreshing) {
@@ -106,7 +107,7 @@ httpClient.interceptors.response.use(
         .then((token) => {
           if (!token) {
             onUnauthorizedLogout?.();
-            return Promise.reject(error);
+            return Promise.reject(hydrateError(error));
           }
           originalRequest.headers = originalRequest.headers || {};
           originalRequest.headers.Authorization = `Bearer ${token}`;
@@ -128,11 +129,11 @@ httpClient.interceptors.response.use(
         return httpClient(originalRequest);
       }
       onUnauthorizedLogout?.();
-      return Promise.reject(error);
+      return Promise.reject(hydrateError(error));
     } catch (refreshError) {
       flushQueue(refreshError, null);
       onUnauthorizedLogout?.();
-      return Promise.reject(refreshError);
+      return Promise.reject(hydrateError(refreshError));
     } finally {
       isRefreshing = false;
     }

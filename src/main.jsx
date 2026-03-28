@@ -1,9 +1,8 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router-dom";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import "./index.css";
+import { Toaster } from "@/components/ui/sonner";
 import router from "./routes/AppRoutes";
 import QuoteAssignmentNotifications from "./realtime/QuoteAssignmentNotifications";
 import { useAuthStore } from "./state/useAuthStore";
@@ -23,7 +22,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <AuthBootstrap>
       <QuoteAssignmentNotifications />
       <RouterProvider router={router} />
-      <ToastContainer position="top-right" autoClose={4000} newestOnTop />
+      <Toaster position="top-right" expand={false} closeButton />
     </AuthBootstrap>
   </React.StrictMode>
 );

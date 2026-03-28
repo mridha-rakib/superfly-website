@@ -1,11 +1,9 @@
 import { create } from "zustand";
+import { getErrorMessage } from "../lib/api-error";
 import { quoteApi } from "../services/quoteApi";
 
-const parseError = (error) =>
-  error?.response?.data?.message ||
-  error?.response?.data?.error ||
-  error?.message ||
-  "Something went wrong. Please try again.";
+const parseError = (error, fallback = "Something went wrong. Please try again.") =>
+  getErrorMessage(error, fallback);
 
 const initialState = {
   isCreating: false,
@@ -17,7 +15,7 @@ const initialState = {
   error: null,
 };
 
-export const useQuoteStore = create((set, get) => ({
+export const useQuoteStore = create((set) => ({
   ...initialState,
 
   createCheckoutIntent: async (payload) => {

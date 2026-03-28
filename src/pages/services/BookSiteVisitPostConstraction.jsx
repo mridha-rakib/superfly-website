@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/notify";
 import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
 
@@ -436,3 +436,4 @@ function BookSiteVisitPostConstraction() {
 }
 
 export default BookSiteVisitPostConstraction;
+

@@ -1,13 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { getErrorMessage } from "../lib/api-error";
 import { configureHttpClient } from "../lib/httpClient";
 import { authApi } from "../services/authApi";
 
-const parseError = (error) =>
-  error?.response?.data?.message ||
-  error?.response?.data?.error ||
-  error?.message ||
-  "Something went wrong. Please try again.";
+const parseError = (error, fallback = "Something went wrong. Please try again.") =>
+  getErrorMessage(error, fallback);
 
 const normalizeUser = (u) => {
   if (!u) return null;

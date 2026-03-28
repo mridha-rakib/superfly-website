@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Call02Icon, Mail01Icon } from "@hugeicons/core-free-icons";
-import { toast } from "react-toastify";
+import { getErrorMessage } from "@/lib/api-error";
+import {
+  getFieldErrorId,
+  useInlineFormErrors,
+} from "@/hooks/useInlineFormErrors";
+import { toast } from "@/lib/notify";
 import { contactApi } from "../../services/contactApi";
 
 const initialFormData = {
@@ -16,12 +21,30 @@ function ContactUs() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const { getFieldA11yProps, getFieldError, validateField } = useInlineFormErrors();
+
+  const getFieldClassName = (fieldName) =>
+    `w-full p-3 border rounded ${
+      getFieldError(fieldName) ? "border-red-500" : "border-gray-300"
+    }`;
 
   const handleChange = (field) => (event) => {
     setFormData((prev) => ({
       ...prev,
       [field]: event.target.value,
     }));
+    if (getFieldError(field)) {
+      validateField(field, event.target, {
+        label:
+          field === "name"
+            ? "Name"
+            : field === "email"
+            ? "Email"
+            : field === "subject"
+            ? "Subject"
+            : "Message",
+      });
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -32,6 +55,20 @@ function ContactUs() {
 
     setError("");
     setSuccessMessage("");
+    const form = event.currentTarget;
+
+    const isValid = [
+      ["name", "Name"],
+      ["email", "Email"],
+      ["subject", "Subject"],
+      ["message", "Message"],
+    ].every(([field, label]) =>
+      validateField(field, form.elements.namedItem(field), { label })
+    );
+
+    if (!isValid) {
+      return;
+    }
 
     const payload = {
       name: formData.name.trim(),
@@ -58,11 +95,7 @@ function ContactUs() {
       setFormData(initialFormData);
       toast.success("Message sent successfully.");
     } catch (err) {
-      const message =
-        err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "Could not send message. Please try again.";
+      const message = getErrorMessage(err, "Could not send message. Please try again.");
       setError(message);
       toast.error(message);
     } finally {
@@ -116,45 +149,107 @@ function ContactUs() {
             </div>
           )}
 
-          <input
-            type="text"
-            placeholder="Name"
-            value={formData.name}
-            onChange={handleChange("name")}
-            className="w-full p-3 mb-3 border border-gray-300 rounded"
-            maxLength={120}
-            required
-          />
+          <div className="mb-3">
+            <label htmlFor="contact-name" className="mb-1 block text-sm font-medium text-gray-700">
+              Name
+            </label>
+            <input
+              id="contact-name"
+              name="name"
+              type="text"
+              placeholder="Name"
+              value={formData.name}
+              onChange={handleChange("name")}
+              onBlur={(event) => validateField("name", event.target, { label: "Name" })}
+              className={getFieldClassName("name")}
+              maxLength={120}
+              required
+              {...getFieldA11yProps("name")}
+            />
+            {getFieldError("name") && (
+              <p id={getFieldErrorId("name")} className="mt-1 text-sm text-red-600">
+                {getFieldError("name")}
+              </p>
+            )}
+          </div>
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange("email")}
-            className="w-full p-3 mb-3 border border-gray-300 rounded"
-            required
-          />
+          <div className="mb-3">
+            <label htmlFor="contact-email" className="mb-1 block text-sm font-medium text-gray-700">
+              Email
+            </label>
+            <input
+              id="contact-email"
+              name="email"
+              type="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange("email")}
+              onBlur={(event) => validateField("email", event.target, { label: "Email" })}
+              className={getFieldClassName("email")}
+              required
+              {...getFieldA11yProps("email")}
+            />
+            {getFieldError("email") && (
+              <p id={getFieldErrorId("email")} className="mt-1 text-sm text-red-600">
+                {getFieldError("email")}
+              </p>
+            )}
+          </div>
 
-          <input
-            type="text"
-            placeholder="Subject"
-            value={formData.subject}
-            onChange={handleChange("subject")}
-            className="w-full p-3 mb-3 border border-gray-300 rounded"
-            maxLength={160}
-            required
-          />
+          <div className="mb-3">
+            <label
+              htmlFor="contact-subject"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Subject
+            </label>
+            <input
+              id="contact-subject"
+              name="subject"
+              type="text"
+              placeholder="Subject"
+              value={formData.subject}
+              onChange={handleChange("subject")}
+              onBlur={(event) => validateField("subject", event.target, { label: "Subject" })}
+              className={getFieldClassName("subject")}
+              maxLength={160}
+              required
+              {...getFieldA11yProps("subject")}
+            />
+            {getFieldError("subject") && (
+              <p id={getFieldErrorId("subject")} className="mt-1 text-sm text-red-600">
+                {getFieldError("subject")}
+              </p>
+            )}
+          </div>
 
-          <textarea
-            placeholder="Message"
-            rows={5}
-            value={formData.message}
-            onChange={handleChange("message")}
-            className="w-full p-3 mb-3 border border-gray-300 rounded resize-none"
-            minLength={10}
-            maxLength={2000}
-            required
-          ></textarea>
+          <div className="mb-3">
+            <label
+              htmlFor="contact-message"
+              className="mb-1 block text-sm font-medium text-gray-700"
+            >
+              Message
+            </label>
+            <textarea
+              id="contact-message"
+              name="message"
+              placeholder="Message"
+              rows={5}
+              value={formData.message}
+              onChange={handleChange("message")}
+              onBlur={(event) => validateField("message", event.target, { label: "Message" })}
+              className={`${getFieldClassName("message")} resize-none`}
+              minLength={10}
+              maxLength={2000}
+              required
+              {...getFieldA11yProps("message")}
+            ></textarea>
+            {getFieldError("message") && (
+              <p id={getFieldErrorId("message")} className="mt-1 text-sm text-red-600">
+                {getFieldError("message")}
+              </p>
+            )}
+          </div>
 
           <button
             type="submit"
@@ -170,3 +265,4 @@ function ContactUs() {
 }
 
 export default ContactUs;
+

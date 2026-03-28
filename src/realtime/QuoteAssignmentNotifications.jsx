@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { io } from "socket.io-client";
-import { toast } from "react-toastify";
+import { toast } from "@/lib/notify";
 import { useAuthStore } from "../state/useAuthStore";
 import { useRealtimeNotificationStore } from "../state/useRealtimeNotificationStore";
 
@@ -108,3 +108,4 @@ const QuoteAssignmentNotifications = () => {
 };
 
 export default QuoteAssignmentNotifications;
+
