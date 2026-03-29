@@ -279,7 +279,7 @@ function ResidentialCleaning() {
                     id="phone"
                     value={contact.phone}
                     onChange={(e) => setContact((p) => ({ ...p, phone: e.target.value }))}
-                    placeholder="Enter your phone number"
+                    placeholder="(555) 123-4567"
                     className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
                     required
                   />
