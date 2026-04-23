@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "@/lib/notify";
 import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
+import { formatTimeTo12Hour, parseTimeTo24Hour } from "../../lib/time-utils";
 
 function BookSiteVisitPostConstraction() {
   const processSteps = [
@@ -61,20 +62,6 @@ function BookSiteVisitPostConstraction() {
       if (Number.isNaN(d.getTime())) return "";
       return d.toISOString().slice(0, 10); // YYYY-MM-DD
     };
-    const to24Hour = (value) => {
-      if (!value) return "";
-      const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-      if (!match) return "";
-      let [_, hh, mm, meridiem] = match;
-      let hour = parseInt(hh, 10);
-      if (hour === 12) {
-        hour = meridiem.toUpperCase() === "AM" ? 0 : 12;
-      } else if (meridiem.toUpperCase() === "PM") {
-        hour += 12;
-      }
-      const hourStr = hour.toString().padStart(2, "0");
-      return `${hourStr}:${mm}`;
-    };
     const payload = {
       serviceType: "post_construction",
       name: formData.name.trim(),
@@ -83,7 +70,7 @@ function BookSiteVisitPostConstraction() {
       phoneNumber: formData.phone.trim(),
       businessAddress: formData.address.trim(),
       preferredDate: normalizeDate(formData.preferredDate),
-      preferredTime: to24Hour(formData.preferredTime),
+      preferredTime: parseTimeTo24Hour(formData.preferredTime),
       specialRequest: formData.specialRequest.trim(),
       squareFoot: Number(formData.squareFoot) || undefined,
       generalContractorName: formData.gcName.trim(),
@@ -148,6 +135,15 @@ function BookSiteVisitPostConstraction() {
     }));
   };
 
+  const handlePreferredTimeBlur = (e) => {
+    const normalized = parseTimeTo24Hour(e.target.value);
+    if (!normalized) return;
+    setFormData((prev) => ({
+      ...prev,
+      preferredTime: formatTimeTo12Hour(normalized),
+    }));
+  };
+
   const closeModal = () => {
     setShowSuccessModal(false);
   };
@@ -188,18 +184,18 @@ function BookSiteVisitPostConstraction() {
             {error}
           </div>
         )}
-        {/* Row 1: Name & Company */}
+        {/* Row 1: Full Name & Company */}
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
             <label htmlFor="name" className="mb-2 font-medium text-gray-700">
-              Name
+              Full Name
             </label>
             <input
               type="text"
               id="name"
               value={formData.name}
               onChange={handleInputChange}
-              placeholder="Name"
+              placeholder="Full Name"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
           </div>
@@ -341,8 +337,8 @@ function BookSiteVisitPostConstraction() {
               id="preferredTime"
               value={formData.preferredTime}
               onChange={handleInputChange}
+              onBlur={handlePreferredTimeBlur}
               placeholder="hh:mm AM/PM"
-              pattern="^(0?[1-9]|1[0-2]):[0-5][0-9]\\s?(AM|PM)$"
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
             />
           </div>
