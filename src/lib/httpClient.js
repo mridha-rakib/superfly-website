@@ -1,8 +1,8 @@
 import axios from "axios";
 import { hydrateError } from "./api-error";
+import { resolveApiBaseUrl } from "./api-base";
 
-const API_BASE_URL =
-  import.meta.env.VITE_BASE_URL || "http://localhost:5173/api/v1";
+const API_BASE_URL = resolveApiBaseUrl();
 
 export const httpClient = axios.create({
   baseURL: API_BASE_URL,

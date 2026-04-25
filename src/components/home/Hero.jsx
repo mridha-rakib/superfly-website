@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import heroImage from "../../assets/images/heroImage.jpg";
+import heroImage from "../../assets/images/heroImage.webp";
 
 function Hero() {
   const navigate = useNavigate();
@@ -57,6 +57,12 @@ function Hero() {
           <img
             src={heroImage}
             alt="Professional cleaning service team"
+            width="1600"
+            height="1067"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            sizes="(min-width: 1024px) 50vw, 100vw"
             className="w-full lg:ml-[-5%] rounded-lg object-cover shadow-2xl"
           />
         </div>

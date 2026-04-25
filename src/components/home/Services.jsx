@@ -1,15 +1,17 @@
 import React from "react";
 import { FiBriefcase, FiHome, FiTool } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import serviceImage1 from "../../assets/images/serviceImage1.jpg";
-import serviceImage2 from "../../assets/images/serviceImage2.jpg";
-import serviceImage3 from "../../assets/images/serviceImage3.jpg";
+import serviceImage1 from "../../assets/images/serviceImage1.webp";
+import serviceImage2 from "../../assets/images/serviceImage2.webp";
+import serviceImage3 from "../../assets/images/serviceImage3.webp";
 
 function Services() {
   const navigate = useNavigate();
   const services = [
     {
       image: serviceImage1,
+      width: 1200,
+      height: 798,
       eyebrow: "Home care",
       icon: FiHome,
       title: "Residential Cleaning",
@@ -20,6 +22,8 @@ function Services() {
     },
     {
       image: serviceImage2,
+      width: 1200,
+      height: 800,
       eyebrow: "Business spaces",
       icon: FiBriefcase,
       title: "Commercial Cleaning",
@@ -30,6 +34,8 @@ function Services() {
     },
     {
       image: serviceImage3,
+      width: 900,
+      height: 1353,
       eyebrow: "Project turnover",
       icon: FiTool,
       title: "Post-Construction Cleaning",
@@ -58,6 +64,11 @@ function Services() {
               <img
                 src={service.image}
                 alt={service.title}
+                width={service.width}
+                height={service.height}
+                loading="lazy"
+                decoding="async"
+                sizes="(min-width: 1280px) 384px, (min-width: 768px) 50vw, 100vw"
                 className="h-[280px] w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />

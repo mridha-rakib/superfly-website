@@ -1,27 +1,10 @@
 import { useEffect } from "react";
-import { io } from "socket.io-client";
 import { toast } from "@/lib/notify";
+import { resolveSocketOrigin } from "@/lib/api-base";
 import { useAuthStore } from "../state/useAuthStore";
 import { useRealtimeNotificationStore } from "../state/useRealtimeNotificationStore";
 
 const SUPPORTED_ROLES = new Set(["client", "cleaner"]);
-
-const resolveSocketBaseUrl = () => {
-  const configured = (import.meta.env.VITE_BASE_URL || "").trim();
-  const fallback = typeof window !== "undefined"
-    ? `${window.location.origin}/api/v1`
-    : "http://localhost:3000/api/v1";
-
-  try {
-    const url = new URL(configured || fallback, window.location.origin);
-    return url.origin;
-  } catch {
-    if (typeof window !== "undefined") {
-      return window.location.origin;
-    }
-    return "http://localhost:3000";
-  }
-};
 
 const QuoteAssignmentNotifications = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -45,12 +28,8 @@ const QuoteAssignmentNotifications = () => {
       return undefined;
     }
 
-    const socket = io(resolveSocketBaseUrl(), {
-      path: "/ws",
-      auth: {
-        token: accessToken,
-      },
-    });
+    let isActive = true;
+    let socket;
 
     const onQuoteAssignment = (payload = {}) => {
       const message =
@@ -94,10 +73,34 @@ const QuoteAssignmentNotifications = () => {
       });
     };
 
-    socket.on("quote:assignment", onQuoteAssignment);
-    socket.on("quote:status", onQuoteStatus);
+    const connect = async () => {
+      try {
+        const { io } = await import("socket.io-client");
+        if (!isActive) {
+          return;
+        }
+
+        socket = io(resolveSocketOrigin(), {
+          path: "/ws",
+          auth: {
+            token: accessToken,
+          },
+        });
+
+        socket.on("quote:assignment", onQuoteAssignment);
+        socket.on("quote:status", onQuoteStatus);
+      } catch (error) {
+        console.error("Failed to initialize realtime notifications", error);
+      }
+    };
+
+    void connect();
 
     return () => {
+      isActive = false;
+      if (!socket) {
+        return;
+      }
       socket.off("quote:assignment", onQuoteAssignment);
       socket.off("quote:status", onQuoteStatus);
       socket.disconnect();
@@ -108,4 +111,3 @@ const QuoteAssignmentNotifications = () => {
 };
 
 export default QuoteAssignmentNotifications;
-
