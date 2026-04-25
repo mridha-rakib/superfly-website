@@ -4,6 +4,17 @@ import { useQuoteStore } from "../../state/useQuoteStore";
 import { cleaningServiceApi } from "../../services/cleaningServiceApi";
 import { formatTimeTo12Hour, parseTimeTo24Hour } from "../../lib/time-utils";
 
+const splitFullName = (value = "") => {
+  const parts = value
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const firstName = parts.shift() || "";
+  const lastName = parts.join(" ").trim() || firstName;
+
+  return { firstName, lastName };
+};
+
 function ResidentialCleaning() {
   const homeownerBenefits = [
     "Reliable and professional cleaning team",
@@ -158,11 +169,8 @@ function ResidentialCleaning() {
         user?.fullName?.trim() ||
         user?.name?.trim() ||
         `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
-      const parsedFirst = fullName?.split(" ")[0] || "Customer";
-      const parsedLast =
-        fullName?.split(" ").slice(1).join(" ").trim() ||
-        user?.lastName ||
-        parsedFirst;
+      const parsedName = splitFullName(fullName || "Customer");
+      const guestName = splitFullName(contact.name);
 
       const payload = {
         services: serviceSelections,
@@ -172,14 +180,14 @@ function ResidentialCleaning() {
         businessAddress: isAuthenticated ? user?.address : contact.address,
         ...(isAuthenticated
           ? {
-              firstName: parsedFirst,
-              lastName: parsedLast,
+              firstName: parsedName.firstName,
+              lastName: parsedName.lastName || user?.lastName || parsedName.firstName,
               email: user?.email,
               phoneNumber: user?.phoneNumber || user?.phone,
             }
           : {
-              firstName: contact.name?.split(" ")[0] || contact.name,
-              lastName: contact.name?.split(" ").slice(1).join(" ") || "",
+              firstName: guestName.firstName,
+              lastName: guestName.lastName,
               email: contact.email,
               phoneNumber: contact.phone,
             }),
@@ -235,14 +243,14 @@ function ResidentialCleaning() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
                   <label htmlFor="name" className="mb-1 font-medium text-gray-700">
-                    Name
+                    Full Name
                   </label>
                   <input
                     type="text"
                     id="name"
                     value={contact.name}
                     onChange={(e) => setContact((p) => ({ ...p, name: e.target.value }))}
-                    placeholder="Enter your name"
+                    placeholder="Enter your full name"
                     className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344]"
                     required
                   />
@@ -308,7 +316,7 @@ function ResidentialCleaning() {
               Using your account details:
               <div className="mt-2 flex flex-col sm:flex-row sm:gap-6">
                 <div>
-                  <span className="font-semibold">Name:</span> {user?.fullName || "-"}
+                  <span className="font-semibold">Full Name:</span> {user?.fullName || "-"}
                 </div>
                 <div>
                   <span className="font-semibold">Email:</span> {user?.email || "-"}

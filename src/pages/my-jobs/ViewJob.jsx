@@ -731,7 +731,7 @@ function ViewJob() {
       <Section title="Client Information">
         <div className="grid sm:grid-cols-2 gap-4">
           <InfoRow
-            label="Name"
+            label="Full Name"
             value={job.contactName || `${job.firstName || ""} ${job.lastName || ""}`.trim()}
           />
           <InfoRow label="Phone" value={job.phoneNumber} />

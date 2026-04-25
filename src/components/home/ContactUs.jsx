@@ -15,6 +15,7 @@ const initialFormData = {
   subject: "",
   message: "",
 };
+const fullNameLabel = "Full Name";
 
 function ContactUs() {
   const [formData, setFormData] = useState(initialFormData);
@@ -37,7 +38,7 @@ function ContactUs() {
       validateField(field, event.target, {
         label:
           field === "name"
-            ? "Name"
+            ? fullNameLabel
             : field === "email"
             ? "Email"
             : field === "subject"
@@ -58,7 +59,7 @@ function ContactUs() {
     const form = event.currentTarget;
 
     const isValid = [
-      ["name", "Name"],
+      ["name", fullNameLabel],
       ["email", "Email"],
       ["subject", "Subject"],
       ["message", "Message"],
@@ -151,16 +152,16 @@ function ContactUs() {
 
           <div className="mb-3">
             <label htmlFor="contact-name" className="mb-1 block text-sm font-medium text-gray-700">
-              Name
+              {fullNameLabel}
             </label>
             <input
               id="contact-name"
               name="name"
               type="text"
-              placeholder="Name"
+              placeholder="Enter your full name"
               value={formData.name}
               onChange={handleChange("name")}
-              onBlur={(event) => validateField("name", event.target, { label: "Name" })}
+              onBlur={(event) => validateField("name", event.target, { label: fullNameLabel })}
               className={getFieldClassName("name")}
               maxLength={120}
               required

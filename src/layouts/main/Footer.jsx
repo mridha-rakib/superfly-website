@@ -17,6 +17,8 @@ function Footer() {
       to: "/services/book-site-visit-post-construction",
     },
     { label: "Contact", to: "/contact" },
+    { label: "Privacy Policy", to: "/privacy-policy" },
+    { label: "Terms & Conditions", to: "/terms-and-conditions" },
   ];
 
   return (

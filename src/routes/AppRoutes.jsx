@@ -20,6 +20,11 @@ const ViewBookingDetails = lazy(() =>
   import("../pages/my-bookings/ViewBookingDetails")
 );
 const Contact = lazy(() => import("../pages/contact/Contact"));
+const PrivacyPolicy = lazy(() => import("../pages/legal/PrivacyPolicy"));
+const TermsAndConditions = lazy(() =>
+  import("../pages/legal/TermsAndConditions")
+);
+const NotFound = lazy(() => import("../pages/not-found/NotFound"));
 const Earning = lazy(() => import("../pages/earning/Earning"));
 const MyJobs = lazy(() => import("../pages/my-jobs/MyJobs"));
 const ViewJob = lazy(() => import("../pages/my-jobs/ViewJob"));
@@ -113,6 +118,14 @@ const router = createBrowserRouter(
         },
         { path: "/contact", element: renderLazyRoute(Contact) },
         {
+          path: "/privacy-policy",
+          element: renderLazyRoute(PrivacyPolicy),
+        },
+        {
+          path: "/terms-and-conditions",
+          element: renderLazyRoute(TermsAndConditions),
+        },
+        {
           path: "/my-jobs",
           element: (
             <ProtectedRoute allowedRoles={["cleaner"]}>
@@ -135,6 +148,10 @@ const router = createBrowserRouter(
               {renderLazyRoute(Earning)}
             </ProtectedRoute>
           ),
+        },
+        {
+          path: "*",
+          element: renderLazyRoute(NotFound),
         },
       ],
     },

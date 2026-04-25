@@ -7,6 +7,35 @@ import {
 import { toast } from "@/lib/notify";
 import { quoteApi } from "../../services/quoteApi";
 import { useAuthStore } from "../../state/useAuthStore";
+import { formatTimeTo12Hour, parseTimeTo24Hour } from "../../lib/time-utils";
+
+const getFieldValidationOptions = (field) => ({
+  label:
+    field === "name"
+      ? "Full name"
+      : field === "companyName"
+      ? "Company name"
+      : field === "companyAddress"
+      ? "Company address"
+      : field === "companyPhone"
+      ? "Company phone number"
+      : field === "companyEmail"
+      ? "Company email"
+      : field === "preferredDate"
+      ? "Preferred date"
+      : field === "preferredTime"
+      ? "Preferred time"
+      : field === "cleaningFrequency"
+      ? "Cleaning frequency"
+      : "Building size",
+  customValidator:
+    field === "preferredTime"
+      ? (value) =>
+          value.trim() && !parseTimeTo24Hour(value)
+            ? "Enter a valid preferred time."
+            : ""
+      : undefined,
+});
 
 function BookSiteVisitCommercial() {
   const processSteps = [
@@ -84,6 +113,7 @@ function BookSiteVisitCommercial() {
     const form = e.currentTarget;
 
     const isValid = [
+      ["name", "Full name"],
       ["companyName", "Company name"],
       ["companyAddress", "Company address"],
       ["companyPhone", "Company phone number"],
@@ -107,17 +137,18 @@ function BookSiteVisitCommercial() {
     }
 
     const numericSquareFoot = Number(formData.squareFoot);
+    const normalizedPreferredTime = parseTimeTo24Hour(formData.preferredTime);
 
     quoteApi
       .createCommercialRequest({
         serviceType: "commercial",
-        name: formData.name,
+        name: formData.name.trim(),
         companyName: formData.companyName,
         email: formData.companyEmail,
         phoneNumber: formData.companyPhone,
         businessAddress: formData.companyAddress,
         preferredDate: formData.preferredDate,
-        preferredTime: formData.preferredTime,
+        preferredTime: normalizedPreferredTime,
         specialRequest: formData.specialRequest,
         squareFoot: numericSquareFoot,
         cleaningFrequency: formData.cleaningFrequency,
@@ -154,25 +185,21 @@ function BookSiteVisitCommercial() {
       [id]: value,
     }));
     if (getFieldError(id)) {
-      validateField(id, e.target, {
-        label:
-          id === "companyName"
-            ? "Company name"
-            : id === "companyAddress"
-            ? "Company address"
-            : id === "companyPhone"
-            ? "Company phone number"
-            : id === "companyEmail"
-            ? "Company email"
-            : id === "preferredDate"
-            ? "Preferred date"
-            : id === "preferredTime"
-            ? "Preferred time"
-            : id === "cleaningFrequency"
-            ? "Cleaning frequency"
-            : "Building size",
-      });
+      validateField(id, e.target, getFieldValidationOptions(id));
     }
+  };
+
+  const handlePreferredTimeBlur = (event) => {
+    validateField("preferredTime", event.target, getFieldValidationOptions("preferredTime"));
+    const normalized = parseTimeTo24Hour(event.target.value);
+    if (!normalized) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      preferredTime: formatTimeTo12Hour(normalized),
+    }));
   };
 
   const handleServiceToggle = (value) => {
@@ -233,17 +260,27 @@ function BookSiteVisitCommercial() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 flex flex-col">
             <label htmlFor="name" className="mb-2 font-medium text-gray-700">
-              Contact Name
+              Full Name
             </label>
             <input
               type="text"
               id="name"
               name="name"
-              placeholder="Contact name"
+              placeholder="Enter your full name"
               value={formData.name}
               onChange={handleInputChange}
+              onBlur={(event) =>
+                validateField("name", event.target, getFieldValidationOptions("name"))
+              }
               className={getFieldClassName("name")}
+              required
+              {...getFieldA11yProps("name")}
             />
+            {getFieldError("name") && (
+              <p id={getFieldErrorId("name")} className="mt-1 text-sm text-red-600">
+                {getFieldError("name")}
+              </p>
+            )}
           </div>
           <div className="flex-1 flex flex-col">
             <label htmlFor="companyName" className="mb-2 font-medium text-gray-700">
@@ -257,7 +294,7 @@ function BookSiteVisitCommercial() {
               value={formData.companyName}
               onChange={handleInputChange}
               onBlur={(event) =>
-                validateField("companyName", event.target, { label: "Company name" })
+                validateField("companyName", event.target, getFieldValidationOptions("companyName"))
               }
               className={getFieldClassName("companyName")}
               required
@@ -285,7 +322,7 @@ function BookSiteVisitCommercial() {
               value={formData.companyEmail}
               onChange={handleInputChange}
               onBlur={(event) =>
-                validateField("companyEmail", event.target, { label: "Company email" })
+                validateField("companyEmail", event.target, getFieldValidationOptions("companyEmail"))
               }
               className={getFieldClassName("companyEmail")}
               required
@@ -309,9 +346,7 @@ function BookSiteVisitCommercial() {
               value={formData.companyPhone}
               onChange={handleInputChange}
               onBlur={(event) =>
-                validateField("companyPhone", event.target, {
-                  label: "Company phone number",
-                })
+                validateField("companyPhone", event.target, getFieldValidationOptions("companyPhone"))
               }
               className={getFieldClassName("companyPhone")}
               required
@@ -339,9 +374,7 @@ function BookSiteVisitCommercial() {
               value={formData.companyAddress}
               onChange={handleInputChange}
               onBlur={(event) =>
-                validateField("companyAddress", event.target, {
-                  label: "Company address",
-                })
+                validateField("companyAddress", event.target, getFieldValidationOptions("companyAddress"))
               }
               className={getFieldClassName("companyAddress")}
               required
@@ -369,7 +402,7 @@ function BookSiteVisitCommercial() {
               value={formData.squareFoot}
               onChange={handleInputChange}
               onBlur={(event) =>
-                validateField("squareFoot", event.target, { label: "Building size" })
+                validateField("squareFoot", event.target, getFieldValidationOptions("squareFoot"))
               }
               className={getFieldClassName("squareFoot")}
               required
@@ -424,9 +457,11 @@ function BookSiteVisitCommercial() {
               value={formData.cleaningFrequency}
               onChange={handleInputChange}
               onBlur={(event) =>
-                validateField("cleaningFrequency", event.target, {
-                  label: "Cleaning frequency",
-                })
+                validateField(
+                  "cleaningFrequency",
+                  event.target,
+                  getFieldValidationOptions("cleaningFrequency")
+                )
               }
               className={getFieldClassName("cleaningFrequency")}
               required
@@ -460,9 +495,7 @@ function BookSiteVisitCommercial() {
               value={formData.preferredDate}
               onChange={handleInputChange}
               onBlur={(event) =>
-                validateField("preferredDate", event.target, {
-                  label: "Preferred date",
-                })
+                validateField("preferredDate", event.target, getFieldValidationOptions("preferredDate"))
               }
               className={getFieldClassName("preferredDate")}
               required
@@ -483,16 +516,14 @@ function BookSiteVisitCommercial() {
               Preferred Time
             </label>
             <input
-              type="time"
+              type="text"
               id="preferredTime"
               name="preferredTime"
               value={formData.preferredTime}
               onChange={handleInputChange}
-              onBlur={(event) =>
-                validateField("preferredTime", event.target, {
-                  label: "Preferred time",
-                })
-              }
+              onBlur={handlePreferredTimeBlur}
+              placeholder="9:00 AM"
+              inputMode="text"
               className={getFieldClassName("preferredTime")}
               required
               {...getFieldA11yProps("preferredTime")}
