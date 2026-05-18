@@ -49,7 +49,7 @@ function Footer() {
           <ul className="space-y-3 text-gray-700">
             <li className="flex items-center gap-3">
               <HugeiconsIcon icon={Call02Icon} />
-              <span>614-206-0296</span>
+              <span>(614) 219-9301</span>
             </li>
 
             <li className="flex items-center gap-3">
