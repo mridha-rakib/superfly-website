@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../state/useAuthStore";
 import { useQuoteStore } from "../../state/useQuoteStore";
 import { cleaningServiceApi } from "../../services/cleaningServiceApi";
 import { formatTimeTo12Hour, parseTimeTo24Hour } from "../../lib/time-utils";
+
+const RESIDENTIAL_FREE_PROMO_CODE = "MARKETING100";
 
 const splitFullName = (value = "") => {
   const parts = value
@@ -16,6 +19,7 @@ const splitFullName = (value = "") => {
 };
 
 function ResidentialCleaning() {
+  const navigate = useNavigate();
   const homeownerBenefits = [
     "Reliable and professional cleaning team",
     "Easy online booking and transparent pricing",
@@ -56,6 +60,9 @@ function ResidentialCleaning() {
     email: "",
   });
   const [specialRequest, setSpecialRequest] = useState("");
+  const [promoCode, setPromoCode] = useState("");
+  const [isPromoApplied, setIsPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -123,6 +130,8 @@ function ResidentialCleaning() {
     const price = priceMap[key] || 0;
     return acc + price * qty;
   }, 0);
+  const promoDiscount = isPromoApplied ? totalPrice : 0;
+  const finalPrice = Math.max(totalPrice - promoDiscount, 0);
 
   const serviceSelections = useMemo(() => {
     const payload = {};
@@ -142,6 +151,43 @@ function ResidentialCleaning() {
       return;
     }
     setServiceTimeInput(formatTimeTo12Hour(serviceTime));
+  };
+
+  const handlePromoCodeChange = (value) => {
+    setPromoCode(value);
+    setPromoError("");
+    if (
+      isPromoApplied &&
+      value.trim().toUpperCase() !== RESIDENTIAL_FREE_PROMO_CODE
+    ) {
+      setIsPromoApplied(false);
+    }
+  };
+
+  const handleApplyPromo = () => {
+    const normalizedCode = promoCode.trim().toUpperCase();
+    setPromoError("");
+
+    if (!normalizedCode) {
+      setIsPromoApplied(false);
+      setPromoError("Enter a promo code.");
+      return;
+    }
+
+    if (normalizedCode !== RESIDENTIAL_FREE_PROMO_CODE) {
+      setIsPromoApplied(false);
+      setPromoError("Invalid promo code.");
+      return;
+    }
+
+    if (totalPrice <= 0) {
+      setIsPromoApplied(false);
+      setPromoError("Select at least one cleaning item before applying this promo.");
+      return;
+    }
+
+    setPromoCode(RESIDENTIAL_FREE_PROMO_CODE);
+    setIsPromoApplied(true);
   };
 
   const handleSubmit = async (e) => {
@@ -192,12 +238,20 @@ function ResidentialCleaning() {
               phoneNumber: contact.phone,
             }),
         notes: specialRequest,
+        ...(isPromoApplied ? { promoCode: RESIDENTIAL_FREE_PROMO_CODE } : {}),
       };
 
       const res = await createCheckoutIntent(payload);
 
       if (res?.flow === "checkout" && res?.checkoutUrl) {
         window.location.assign(res.checkoutUrl);
+        return;
+      }
+
+      if (res?.flow === "promo" && res?.quote) {
+        navigate("/checkout/success?promo=1", {
+          state: { quote: res.quote, promoCheckout: true },
+        });
         return;
       }
 
@@ -451,6 +505,36 @@ function ResidentialCleaning() {
             />
           </div>
 
+          <div className="flex flex-col">
+            <label htmlFor="promo-code" className="mb-1 font-medium text-gray-700">
+              Promo Code
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                id="promo-code"
+                value={promoCode}
+                onChange={(e) => handlePromoCodeChange(e.target.value)}
+                placeholder="Enter promo code"
+                className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C85344] uppercase"
+              />
+              <button
+                type="button"
+                onClick={handleApplyPromo}
+                className="sm:w-32 bg-[#C85344] text-white px-5 py-3 rounded-lg hover:bg-[#b84335] transition font-medium"
+              >
+                Apply
+              </button>
+            </div>
+            {isPromoApplied ? (
+              <p className="mt-2 text-sm font-medium text-green-700">
+                Promo applied: Residential Clean 100% off
+              </p>
+            ) : promoError ? (
+              <p className="mt-2 text-sm text-red-600">{promoError}</p>
+            ) : null}
+          </div>
+
           {/* Cleaning Details */}
           {Object.keys(details).length > 0 && (
             <div className="p-6 border border-gray-200 rounded-lg space-y-4 mt-6 bg-gray-50">
@@ -507,9 +591,24 @@ function ResidentialCleaning() {
                 );
               })}
               <div className="flex justify-between items-center font-bold text-lg mt-4 text-gray-900">
-                <span>Total</span>
+                <span>{isPromoApplied ? "Subtotal" : "Total"}</span>
                 <span>${totalPrice.toFixed(2)}</span>
               </div>
+              {isPromoApplied && (
+                <>
+                  <div className="flex justify-between items-center font-semibold text-green-700">
+                    <span>Promo Discount</span>
+                    <span>-${promoDiscount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center font-bold text-xl text-gray-900 border-t border-gray-200 pt-4">
+                    <span>Total</span>
+                    <span>${finalPrice.toFixed(2)}</span>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    No card required for this promo checkout.
+                  </p>
+                </>
+              )}
             </div>
           )}
 
@@ -519,8 +618,12 @@ function ResidentialCleaning() {
             className="w-full bg-[#C85344] text-white p-4 rounded-lg hover:bg-[#b84335] transition font-medium text-lg mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting || isCreating
-              ? "Redirecting to checkout..."
-              : "Get Your Instant Quote"}
+              ? isPromoApplied
+                ? "Completing booking..."
+                : "Redirecting to checkout..."
+              : isPromoApplied
+                ? "Complete Booking"
+                : "Get Your Instant Quote"}
           </button>
         </form>
 

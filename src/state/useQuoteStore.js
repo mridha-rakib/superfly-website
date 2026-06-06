@@ -25,7 +25,20 @@ export const useQuoteStore = create((set) => ({
       if (intent?.flow === "checkout" && !intent?.checkoutUrl) {
         throw new Error("Checkout URL is missing from server response.");
       }
-      set({ lastIntent: intent });
+      set({
+        lastIntent: intent,
+        ...(intent?.flow === "promo" && intent?.quote
+          ? {
+              lastQuote: intent.quote,
+              lastStatus: {
+                status: "paid",
+                quoteId: intent.quote._id,
+                paymentAmount: intent.quote.paymentAmount,
+                currency: intent.quote.currency,
+              },
+            }
+          : {}),
+      });
       return intent;
     } catch (error) {
       set({ error: parseError(error) });

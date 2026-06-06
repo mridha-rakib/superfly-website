@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "../../state/useAuthStore";
 import { useQuoteStore } from "../../state/useQuoteStore";
 import { formatTimeTo12Hour } from "../../lib/time-utils";
 
 function CheckoutSuccess() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const isPromoCheckout = searchParams.get("promo") === "1";
+  const promoQuote = location.state?.promoCheckout ? location.state.quote : null;
   const { isAuthenticated, role } = useAuthStore((state) => ({
     isAuthenticated: state.isAuthenticated,
     role: state.role,
@@ -33,6 +36,11 @@ function CheckoutSuccess() {
   const [infoMessage, setInfoMessage] = useState("");
 
   useEffect(() => {
+    if (isPromoCheckout && promoQuote) {
+      setInfoMessage("Promo checkout completed. Successfully Booked.");
+      return;
+    }
+
     if (!sessionId) {
       setInfoMessage("Missing checkout session id. Please contact support.");
       return;
@@ -70,22 +78,24 @@ function CheckoutSuccess() {
     return () => {
       isMounted = false;
     };
-  }, [sessionId, confirmCheckout, fetchPaymentStatus]);
+  }, [sessionId, confirmCheckout, fetchPaymentStatus, isPromoCheckout, promoQuote]);
+
+  const displayQuote = promoQuote || lastQuote;
 
   const amountLabel = useMemo(() => {
-    if (lastQuote?.totalPrice) {
-      return `$${lastQuote.totalPrice.toFixed(2)}`;
+    if (typeof displayQuote?.totalPrice === "number") {
+      return `$${displayQuote.totalPrice.toFixed(2)}`;
     }
     if (lastStatus?.paymentAmount) {
       return `$${(lastStatus.paymentAmount / 100).toFixed(2)}`;
     }
     return null;
-  }, [lastQuote, lastStatus]);
+  }, [displayQuote, lastStatus]);
 
   const preferredTimeLabel =
-    formatTimeTo12Hour(lastQuote?.preferredTime || lastStatus?.preferredTime) ||
+    formatTimeTo12Hour(displayQuote?.preferredTime || lastStatus?.preferredTime) ||
     "--";
-  const serviceDateLabel = lastQuote?.serviceDate || lastStatus?.serviceDate || "--";
+  const serviceDateLabel = displayQuote?.serviceDate || lastStatus?.serviceDate || "--";
 
   const bookingCta = isAuthenticated && role === "client" ? "/my-booking" : "/";
 
@@ -103,7 +113,9 @@ function CheckoutSuccess() {
   return (
     <div className="max-w-4xl mx-auto py-14 px-4 md:px-10">
       <div className="text-center mb-10">
-        <p className="text-xs uppercase tracking-[0.3em] text-[#C85344]/80">Payment</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-[#C85344]/80">
+          {isPromoCheckout ? "Promo Checkout" : "Payment"}
+        </p>
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2">Checkout Successful</h1>
         <p className="text-gray-700 mt-3">
           {infoMessage || "Confirming your payment and generating your booking..."}
@@ -121,23 +133,29 @@ function CheckoutSuccess() {
         <div className="text-center text-gray-600 mb-8">Hang tight... finishing up.</div>
       ) : null}
 
-      {lastQuote ? (
+      {displayQuote ? (
         <div className={`${glowCard} p-10 space-y-5`}>
           <div className="grid sm:grid-cols-2 gap-3">
-            <InfoRow label="Booking ID" value={lastQuote._id} />
+            <InfoRow label="Booking ID" value={displayQuote._id} />
             <InfoRow label="Service Date" value={serviceDateLabel} />
             <InfoRow label="Preferred Time" value={preferredTimeLabel} />
-            <InfoRow label="Amount" value={amountLabel || lastQuote.paymentAmount || "--"} />
+            <InfoRow label="Amount" value={amountLabel || displayQuote.paymentAmount || "--"} />
             <InfoRow label="Payment Status" value="Paid" valueClass="text-green-700 font-semibold" />
           </div>
 
-          {lastQuote.services?.length ? (
+          {displayQuote.promoCode ? (
+            <div className="rounded-lg bg-green-50 border border-green-100 px-4 py-3 text-sm text-green-800">
+              Promo applied: {displayQuote.promoDescription || displayQuote.promoCode}
+            </div>
+          ) : null}
+
+          {displayQuote.services?.length ? (
             <div className="pt-4 border-t border-gray-100">
               <div className="text-sm font-semibold text-gray-900 mb-3 tracking-wide">
                 Selected Services
               </div>
               <ul className="space-y-2 text-sm text-gray-700">
-                {lastQuote.services.map((item) => {
+                {displayQuote.services.map((item) => {
                   const unit = typeof item.unitPrice === "number" ? `$${item.unitPrice.toFixed(2)}` : null;
                   const subtotal =
                     typeof item.subtotal === "number"
